@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:acquisitionpro/main.dart'; // Correct the import path
+import 'package:acquistionpro/src/main.dart'; // Correct the import path
 
 void main() {
   testWidgets('AcquisitionProApp smoke test', (WidgetTester tester) async {

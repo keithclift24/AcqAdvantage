@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:acquisitionpro/src/core/providers/user_provider.dart';
+import 'package:acquistionpro/src/core/providers/user_provider.dart';
 // Ensure the HomeScreen is defined and imported here
-import 'package:acquisitionpro/src/features/home/presentation/home_screen.dart';
+import 'package:acquistionpro/src/features/login/presentation/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
