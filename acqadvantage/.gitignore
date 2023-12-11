@@ -22,7 +22,6 @@
 *.pub-cache/
 .packages
 .pub/
-build/
 flutter_*.png
 *.part
 *.patch
