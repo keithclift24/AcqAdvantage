@@ -1,29 +1,42 @@
-import '../models/user.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:acquisitionpro/src/core/models/user.dart';
 
 class AuthenticationService {
-  // This could be your API client in the real app
-  final _apiClient = null;
+  // Replace with your actual REST API endpoint
+  final String _baseUrl = 'https://yourapi.com/auth';
 
-  // Simulate a login process
-  Future<User?> login(String email, String password) async {
-    // TODO: Implement network request to login and fetch user data
-    // For now, we'll simulate user login with a fake user
-    await Future.delayed(Duration(seconds: 2)); // Simulate network delay
-
-    // Normally you'd get the user data from the API response
-    // Here we're just creating a dummy user
-    return User(
-      id: '1',
-      name: 'John Doe',
-      email: email,
-      role: 'user',
+  Future<User> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/login'),
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode(<String, String>{
+        'email': email,
+        'password': password,
+      }),
     );
+
+    if (response.statusCode == 200) {
+      // If the server returns a 200 OK response, parse the JSON
+      return User.fromJson(jsonDecode(response.body));
+    } else {
+      // If the server did not return a 200 OK response,
+      // throw an exception.
+      throw LoginException('Failed to login. Status code: ${response.statusCode}');
+    }
   }
 
-  // Simulate a logout process
   Future<void> logout() async {
-    // TODO: Implement network request to logout
-    await Future.delayed(Duration(seconds: 1)); // Simulate network delay
-    // Perform logout actions like clearing tokens, user data, etc.
+    // Implement logout logic, possibly including a network request to inform the backend
   }
+}
+
+class LoginException implements Exception {
+  final String message;
+  LoginException(this.message);
+
+  @override
+  String toString() => 'LoginException: $message';
 }

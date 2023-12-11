@@ -30,8 +30,8 @@ class LoginPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Login to Acquisition Pro'),
       ),
-      body: Center(
-        child: const Text('Login Page Content Goes Here'),
+      body: const Center(
+        child: Text('Login Page Content Goes Here'),
       ),
     );
   }
