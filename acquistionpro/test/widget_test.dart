@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:acquisitionpro/src/main.dart'; // Correct the import path
+import 'package:acquisitionpro/main.dart'; // make sure this import points to your main app file
 
 void main() {
-  testWidgets('AcquisitionProApp smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const AcquisitionProApp());
+  testWidgets('My app has a title', (WidgetTester tester) async {
+    // Build the app and trigger a frame.
+    await tester.pumpWidget(const AcquisitionProApp()); // replace with your actual app class name
 
-    // Verify that the login page is shown.
-    expect(find.text('Login to Acquisition Pro'), findsOneWidget);
-    expect(find.text('Login Page Content Goes Here'), findsOneWidget);
-
-    // Add more tests specific to your login page here.
-    // For example, you might want to check for TextFields, Buttons, etc.
+    // Check if the app contains any widgets or text you expect.
+    // For example, if your app has a title somewhere, you can look for it:
+    expect(find.text('Some title or text in your app'), findsOneWidget);
   });
 }
