@@ -99,7 +99,7 @@ class LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/acqprologo.png', width: 480, height: 480), // Logo size increased
+                  Image.asset('assets/images/acqadvantage.png', width: 480, height: 480), // Logo size increased
                   const SizedBox(height: 48),
                   Form(
                     key: _formKey,
