@@ -63,11 +63,13 @@ class LoginScreenState extends State<LoginScreen> {
           },
           body: jsonEncode(<String, String>{
             'email': _emailController.text,
-            'password': _passwordController.text,
+            'password': base64Encode(utf8.encode(_passwordController.text)), // Encrypt the password
           }),
         );
 
         if (response.statusCode == 201) {
+          final userData = jsonDecode(response.body);
+          print('User data: $userData'); // Save the user data
           scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Signup successful, please log in')),
           );
@@ -79,6 +81,13 @@ class LoginScreenState extends State<LoginScreen> {
             ),
           );
         }
+      } catch (error) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to sign up: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -125,7 +134,8 @@ class LoginScreenState extends State<LoginScreen> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!value.contains('@')) {
+                            final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+$');
+                            if (!emailRegex.hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;

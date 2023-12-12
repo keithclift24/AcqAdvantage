@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:acquisitionpro/src/core/providers/user_provider.dart';
 import 'package:acquisitionpro/src/features/login/presentation/login_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // Import the firebase_options.dart file
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Required for Firebase initialization
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // Pass the Firebase options
+  );
   runApp(const AcquisitionProApp());
 }
 
@@ -23,7 +29,7 @@ class AcquisitionProApp extends StatelessWidget {
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        home: const LoginScreen(), // This should now be your updated LoginScreen with form fields
+        home: const LoginScreen(), // Your login screen widget
       ),
     );
   }
