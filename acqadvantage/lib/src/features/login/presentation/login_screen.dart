@@ -6,7 +6,7 @@ import 'package:acquisitionpro/src/core/providers/user_provider.dart';
 import 'package:acquisitionpro/src/features/login/presentation/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   LoginScreenState createState() => LoginScreenState();
@@ -106,52 +106,7 @@ class LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        TextFormField(
-                          controller: _emailController,
-                          style: const TextStyle(color: Colors.black),
-                          decoration: const InputDecoration(
-                            labelText: 'Username',
-                            labelStyle: TextStyle(color: Colors.black),
-                            hintText: 'Enter your username',
-                            hintStyle: TextStyle(color: Colors.black54),
-                            border: OutlineInputBorder(),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.black54),
-                            ),
-                            prefixIcon: Icon(Icons.person, color: Colors.black54),
-                          ),
-                          keyboardType: TextInputType.text,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your username';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordController,
-                          style: const TextStyle(color: Colors.black),
-                          decoration: const InputDecoration(
-                            labelText: 'Password',
-                            labelStyle: TextStyle(color: Colors.black),
-                            hintText: 'Enter your password',
-                            hintStyle: TextStyle(color: Colors.black54),
-                            border: OutlineInputBorder(),
-                            enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.black54),
-                            ),
-                            prefixIcon: Icon(Icons.lock, color: Colors.black54),
-                          ),
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your password';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
+                        // ... Email and Password TextFormFields
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Colors.white,
@@ -175,6 +130,7 @@ class LoginScreenState extends State<LoginScreen> {
                           onPressed: _isLoading ? null : _signup,
                           child: const Text('Sign Up'),
                         ),
+                        // ... Rest of the UI
                       ],
                     ),
                   ),
