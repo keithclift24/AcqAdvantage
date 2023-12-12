@@ -41250,12 +41250,12 @@ break
 case 6:case 3:return A.R(null,r)
 case 1:return A.Q(p,r)}})
 return A.S($async$vJ,r)},
-L(a){var s=this,r=null,q=A.ayj(r,r,new A.tC("assets/images/acqadvantage.png",r,r)),p=A.aod(s.d,B.Db,B.M4,!1,B.h3,new A.a0b()),o=A.aod(s.e,B.Da,r,!0,B.h3,new A.a0c()),n=A.am_(r,r,B.fe,r,r,r,r,r,r,B.j,r,B.xa,r,r,r,r,r,r,r),m=s.r,l=m?r:s.ga4p()
+L(a){var s=this,r=null,q=A.ayj(r,r,new A.tC("assets/images/acqadvantagelogo.png",r,r)),p=A.aod(s.d,B.Db,B.M4,!1,B.h3,new A.a0b()),o=A.aod(s.e,B.Da,r,!0,B.h3,new A.a0c()),n=A.am_(r,r,B.fe,r,r,r,r,r,r,B.j,r,B.xa,r,r,r,r,r,r,r),m=s.r,l=m?r:s.ga4p()
 n=A.alZ(m?B.zW:B.Qh,l,n)
 l=A.am_(r,r,B.He,r,r,r,r,r,r,B.j,r,B.xa,r,r,r,r,r,r,r)
 m=t.E
 l=A.UQ(A.b([p,B.xb,o,B.KW,n,B.xb,A.alZ(B.Qi,s.r?r:s.ga84(),l)],m),B.hQ,B.dI,B.dJ)
-return A.anJ(r,B.j,A.a45(!0,A.mh(new A.IQ(B.Ck,new A.ev(B.yH,A.UQ(A.b([new A.vb(q,480,480,r),B.KX,new A.v_(l,B.kw,s.f)],m),B.cA,B.GU,B.dJ),r),r),r,r),!0))}}
+return A.anJ(r,B.j,A.a45(!0,A.mh(new A.IQ(B.Ck,new A.ev(B.yH,A.UQ(A.b([new A.vb(q,240,240,r),B.KX,new A.v_(l,B.kw,s.f)],m),B.cA,B.GU,B.dJ),r),r),r,r),!0))}}
 A.a06.prototype={
 $0(){return this.a.r=!0},
 $S:0}
