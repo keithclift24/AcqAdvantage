@@ -1,10 +1,10 @@
-# acqadvantagelogo
+# acqadvantage
 
 A new Flutter project.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application. This is my acqadvantagelogo website..
+This project is a starting point for a Flutter application. This is my acqadvantage website..
 
 A few resources to get you started if this is your first Flutter project:
 
