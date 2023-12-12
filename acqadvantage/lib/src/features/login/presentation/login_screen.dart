@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:acquisitionpro/src/core/providers/user_provider.dart';
 import 'package:acquisitionpro/src/features/login/presentation/home_screen.dart';
@@ -23,7 +25,7 @@ class LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() async {
+  Future<void> _login() async {
     final isValid = _formKey.currentState?.validate();
     if (isValid == true) {
       setState(() => _isLoading = true);
@@ -48,9 +50,39 @@ class LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Placeholder for the signup function
-  void _signup() {
-    // Implement your signup logic
+  Future<void> _signup() async {
+    final isValid = _formKey.currentState?.validate();
+    if (isValid == true) {
+      setState(() => _isLoading = true);
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      try {
+        final response = await http.post(
+          Uri.parse('https://green-lab-7ed2.keithclift24.workers.dev/signup'), // Replace with your actual signup endpoint
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+          },
+          body: jsonEncode(<String, String>{
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        if (response.statusCode == 201) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(content: Text('Signup successful, please log in')),
+          );
+        } else {
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text('Failed to sign up: ${response.body}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
