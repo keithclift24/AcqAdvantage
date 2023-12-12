@@ -1,10 +1,10 @@
-# acqadvantagelogotransparent
+# acqadvantagelogo
 
 A new Flutter project.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application. This is my acqadvantagelogotransparent website..
+This project is a starting point for a Flutter application. This is my acqadvantagelogo website..
 
 A few resources to get you started if this is your first Flutter project:
 
