@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:acqadvantage/providers/auth_provider.dart';
-import 'package:acqadvantage/screens/login_screen.dart';
-import 'package:acqadvantage/theme.dart';
+import 'providers/auth_provider.dart';
+import 'screens/login_screen.dart';
+import 'theme.dart';
 
 void main() {
   runApp(const AcqAdvantageApp());

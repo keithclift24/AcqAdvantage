@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(32.0),
                         constraints: const BoxConstraints(maxWidth: 400),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(16.0),
                         ),
                         child: Form(
@@ -109,23 +109,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                         if (mounted) {
                                           if (success) {
-                                            Navigator.of(context)
-                                                .pushReplacement(
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const HomeScreen(),
-                                              ),
-                                            );
+                                            if (context.mounted) {
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const HomeScreen(),
+                                                ),
+                                              );
+                                            }
                                           } else {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                    authProvider.errorMessage ??
-                                                        'Login failed'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(authProvider
+                                                          .errorMessage ??
+                                                      'Login failed'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
                                           }
                                         }
                                       },
@@ -157,23 +161,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                         if (mounted) {
                                           if (success) {
-                                            Navigator.of(context)
-                                                .pushReplacement(
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const HomeScreen(),
-                                              ),
-                                            );
+                                            if (context.mounted) {
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const HomeScreen(),
+                                                ),
+                                              );
+                                            }
                                           } else {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                    authProvider.errorMessage ??
-                                                        'Google login failed'),
-                                                backgroundColor: Colors.red,
-                                              ),
-                                            );
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(authProvider
+                                                          .errorMessage ??
+                                                      'Google login failed'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
                                           }
                                         }
                                       },
@@ -216,7 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   // Loading overlay
                   if (authProvider.isLoading)
                     Container(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       child: const Center(
                         child: CircularProgressIndicator(),
                       ),

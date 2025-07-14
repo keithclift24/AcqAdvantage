@@ -43,7 +43,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print(e);
+      debugPrint('Login error: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -74,7 +74,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print(e);
+      debugPrint('Google login error: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -107,7 +107,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print(e);
+      debugPrint('Registration error: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -126,7 +126,7 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print(e);
+      debugPrint('Password recovery error: $e');
       _errorMessage = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -144,7 +144,7 @@ class AuthProvider extends ChangeNotifier {
       _currentUser = null;
       _errorMessage = null;
     } catch (e) {
-      print(e);
+      debugPrint('Logout error: $e');
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
