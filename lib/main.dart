@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:acqadvantage/src/core/providers/auth_provider.dart';
+import 'package:acqadvantage/providers/auth_provider.dart';
 import 'package:acqadvantage/screens/login_screen.dart';
 import 'package:acqadvantage/theme.dart';
 
