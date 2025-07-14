@@ -1,4 +1,4 @@
-import 'package:acqadvantage/theme.dart'; // Correctly imported already!
+import 'package:acqadvantage/theme.dart'; // Correctly imported already! 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // import 'package:acquisitionpro/src/core/providers/user_provider.dart'; // Change path if project name differs
