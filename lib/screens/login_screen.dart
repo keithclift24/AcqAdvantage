@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:acquisitionpro/src/core/providers/auth_provider.dart';
+import '../providers/auth_provider.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
@@ -42,260 +44,171 @@ class _LoginScreenState extends State<LoginScreen> {
               return Stack(
                 children: [
                   Center(
-                    child: Container(
-                      width: 360.0,
-                      padding: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(12.0),
-                      ),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Logo
-                            Image.asset(
-                              'assets/images/acqadvantagelogotransparent.png',
-                              height: 200.0,
-                            ),
-                            const SizedBox(height: 24.0),
-                            
-                            // Title
-                            Text(
-                              'ACCOUNT LOGIN',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
+                    child: SingleChildScrollView(
+                      child: Container(
+                        padding: const EdgeInsets.all(32.0),
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo
+                              Image.asset(
+                                'assets/images/acqadvantagelogotransparent.png',
                               ),
-                            ),
-                            const SizedBox(height: 24.0),
-                            
-                            // Email TextField
-                            TextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                hintText: 'Enter your email',
-                              ),
-                            ),
-                            const SizedBox(height: 16.0),
-                            
-                            // Password TextField
-                            TextField(
-                              controller: _passwordController,
-                              obscureText: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Password',
-                                hintText: 'Enter your password',
-                              ),
-                            ),
-                            const SizedBox(height: 24.0),
-                            
-                            // Login Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: authProvider.isLoading ? null : () async {
-                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                  await authProvider.loginWithEmail(
-                                    _emailController.text.trim(),
-                                    _passwordController.text,
-                                  );
-                                  
-                                  if (mounted) {
-                                    if (authProvider.errorMessage != null) {
-                                      // Show error message
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(authProvider.errorMessage!),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    } else if (authProvider.isAuthenticated) {
-                                      // TODO: Navigate to home screen
-                                      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Login successful!'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: authProvider.isLoading 
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                      ),
-                                    )
-                                  : const Text('Login'),
-                              ),
-                            ),
-                            const SizedBox(height: 12.0),
-                            
-                            // Forgot Password Button
-                            TextButton(
-                              onPressed: authProvider.isLoading ? null : () async {
-                                if (_emailController.text.trim().isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Please enter your email address first'),
-                                      backgroundColor: Colors.orange,
-                                    ),
-                                  );
-                                  return;
-                                }
-                                
-                                final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                await authProvider.recoverPassword(_emailController.text.trim());
-                                
-                                if (mounted) {
-                                  if (authProvider.errorMessage != null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(authProvider.errorMessage!),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Password recovery email sent!'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              child: const Text(
-                                'Forgot Password?',
-                                style: TextStyle(color: Colors.white70),
-                              ),
-                            ),
-                            const SizedBox(height: 16.0),
-                            
-                            // Google Connect Button
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: authProvider.isLoading ? null : () async {
-                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                  await authProvider.loginWithGoogle();
-                                  
-                                  if (mounted) {
-                                    if (authProvider.errorMessage != null) {
-                                      // Show error message
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(authProvider.errorMessage!),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    } else if (authProvider.isAuthenticated) {
-                                      // TODO: Navigate to home screen
-                                      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => HomeScreen()));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Google login successful!'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Colors.white),
-                                  foregroundColor: Colors.white,
+                              const SizedBox(height: 16.0),
+
+                              // Title
+                              const Text(
+                                'ACCOUNT LOGIN',
+                                style: TextStyle(
+                                  fontSize: 24.0,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                child: authProvider.isLoading 
-                                  ? const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8.0),
-                                        Text('Connecting...'),
-                                      ],
-                                    )
-                                  : const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.login, size: 24.0), // Placeholder for Google icon
-                                        SizedBox(width: 8.0),
-                                        Text('Connect with Google'),
-                                      ],
-                                    ),
                               ),
-                            ),
-                            const SizedBox(height: 16.0),
-                            
-                            // Sign Up Button
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Text(
-                                  "Don't have an account? ",
-                                  style: TextStyle(color: Colors.white70),
+                              const SizedBox(height: 16.0),
+
+                              // Email TextField
+                              TextField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
                                 ),
-                                TextButton(
-                                  onPressed: authProvider.isLoading ? null : () async {
-                                    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Please enter both email and password'),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    
-                                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                    await authProvider.registerWithEmail(
-                                      _emailController.text.trim(),
-                                      _passwordController.text,
-                                    );
-                                    
-                                    if (mounted) {
-                                      if (authProvider.errorMessage != null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text(authProvider.errorMessage!),
-                                            backgroundColor: Colors.red,
-                                          ),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Password TextField
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Password',
+                                ),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Login Button
+                              ElevatedButton(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () async {
+                                        final authProvider =
+                                            Provider.of<AuthProvider>(context,
+                                                listen: false);
+                                        final success =
+                                            await authProvider.loginWithEmail(
+                                          _emailController.text.trim(),
+                                          _passwordController.text,
                                         );
-                                      } else if (authProvider.isAuthenticated) {
-                                        // TODO: Navigate to home screen or show welcome message
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Registration successful! Welcome!'),
-                                            backgroundColor: Colors.green,
+
+                                        if (mounted) {
+                                          if (success) {
+                                            Navigator.of(context)
+                                                .pushReplacement(
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const HomeScreen(),
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    authProvider.errorMessage ??
+                                                        'Login failed'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                child: authProvider.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
+                                        ),
+                                      )
+                                    : const Text('Login'),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Google Connect Button
+                              OutlinedButton(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () async {
+                                        final authProvider =
+                                            Provider.of<AuthProvider>(context,
+                                                listen: false);
+                                        final success = await authProvider
+                                            .loginWithGoogle();
+
+                                        if (mounted) {
+                                          if (success) {
+                                            Navigator.of(context)
+                                                .pushReplacement(
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const HomeScreen(),
+                                              ),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    authProvider.errorMessage ??
+                                                        'Google login failed'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                child: authProvider.isLoading
+                                    ? const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
                                           ),
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: const Text(
-                                    'Sign Up',
-                                    style: TextStyle(
-                                      color: Colors.blue,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                          SizedBox(width: 8.0),
+                                          Text('Connecting...'),
+                                        ],
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/google_icon.png',
+                                            height: 24.0,
+                                            width: 24.0,
+                                          ),
+                                          const SizedBox(width: 8.0),
+                                          const Text('Connect with Google'),
+                                        ],
+                                      ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
