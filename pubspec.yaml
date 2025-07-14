@@ -5,11 +5,11 @@ description: "A new Flutter project."
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-# The following defines the version and build number for your application. 
+# The following defines the version and build number for your application.
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.3 <4.0.0' 
+  sdk: '>=3.2.3 <4.0.0'
 
 dependencies:
   flutter:
@@ -17,8 +17,9 @@ dependencies:
   provider: ^6.0.1
   cupertino_icons: ^1.0.2
   http: ^1.1.2 # Correct version of http added under dependencies
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.15.2
+  google_fonts: ^6.1.0
+  backendless_sdk: ^8.0.0-alpha.33
+  flutter_secure_storage: ^9.2.2
   
 dev_dependencies:
   flutter_test:
