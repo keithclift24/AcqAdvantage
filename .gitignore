@@ -8,7 +8,6 @@
 .buildlog/
 .history
 .svn/
-.dart_tool/
 
 # IntelliJ related
 .idea/
@@ -23,7 +22,6 @@
 *.pub-cache/
 .packages
 .pub/
-build/
 flutter_*.png
 *.part
 *.patch
