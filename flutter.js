@@ -29,7 +29,7 @@ _flutter.loader = null;
    *
    * Resolves/rejects with whatever the original `promises` does, or rejects
    * if `promise` takes longer to complete than `duration`. In that case,
-   * `debugName` is used to compose a legible error message.
+   * `debugName` is used to compose a legible error message. 
    *
    * If `duration` is < 0, the original `promise` is returned unchanged.
    * @param {Promise} promise
