@@ -1,12 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 
 class AuthProvider extends ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   BackendlessUser? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
@@ -18,12 +16,22 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   AuthProvider() {
-    // Correct way to initialize with a custom domain for this SDK version
-    Backendless.initApp(
-      applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-      customDomain: "toughquilt.backendless.app", // THE FIX
-      androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
-    );
+    // Conditional initialization based on platform
+    if (kIsWeb) {
+      // Web initialization using JavaScript API key
+      Backendless.initApp(
+        applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+        customDomain: "toughquilt.backendless.app",
+        androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
+      );
+    } else {
+      // Mobile initialization using Android API key
+      Backendless.initApp(
+        applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+        customDomain: "toughquilt.backendless.app",
+        androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
+      );
+    }
   }
 
   Future<bool> loginWithEmail(String email, String password) async {
@@ -33,10 +41,6 @@ class AuthProvider extends ChangeNotifier {
       final user = await Backendless.userService
           .login(email, password, stayLoggedIn: true);
       _currentUser = user;
-      final userToken = await Backendless.userService.getUserToken();
-      if (userToken != null) {
-        await _secureStorage.write(key: 'user-token', value: userToken);
-      }
       _errorMessage = null;
       _isLoading = false;
       notifyListeners();
@@ -59,10 +63,6 @@ class AuthProvider extends ChangeNotifier {
 
       if (user != null) {
         _currentUser = user;
-        final userToken = await Backendless.userService.getUserToken();
-        if (userToken != null) {
-          await _secureStorage.write(key: 'user-token', value: userToken);
-        }
         _errorMessage = null;
         _isLoading = false;
         notifyListeners();
@@ -102,7 +102,6 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await Backendless.userService.logout();
-      await _secureStorage.delete(key: 'user-token');
       _currentUser = null;
       _errorMessage = null;
     } catch (e) {
@@ -120,8 +119,8 @@ class AuthProvider extends ChangeNotifier {
     try {
       debugPrint('Creating checkout session for plan type: $planType');
 
-      // Get user token from secure storage
-      final userToken = await _secureStorage.read(key: 'user-token');
+      // Get user token from Backendless
+      final userToken = await Backendless.userService.getUserToken();
       debugPrint('User token retrieved: ${userToken != null ? 'Yes' : 'No'}');
 
       if (userToken == null || _currentUser == null) {
