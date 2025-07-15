@@ -8,6 +8,7 @@ class AuthProvider extends ChangeNotifier {
   BackendlessUser? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
+  bool _isInitialized = false;
 
   // Public getters
   BackendlessUser? get currentUser => _currentUser;
@@ -16,21 +17,49 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   AuthProvider() {
-    // Conditional initialization based on platform
-    if (kIsWeb) {
-      // Web initialization using JavaScript API key
-      Backendless.initApp(
-        applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-        customDomain: "toughquilt.backendless.app",
-        androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
-      );
-    } else {
-      // Mobile initialization using Android API key
-      Backendless.initApp(
-        applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-        customDomain: "toughquilt.backendless.app",
-        androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
-      );
+    // Don't initialize immediately, wait for first use
+    debugPrint('AuthProvider created, deferring Backendless initialization');
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (_isInitialized) return;
+
+    try {
+      debugPrint('Initializing Backendless...');
+      // Conditional initialization based on platform
+      if (kIsWeb) {
+        // Web initialization using JavaScript API key
+        Backendless.initApp(
+          applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+          customDomain: "toughquilt.backendless.app",
+          androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
+        );
+        debugPrint('Backendless initialized for web');
+      } else {
+        // Mobile initialization using Android API key
+        Backendless.initApp(
+          applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+          customDomain: "toughquilt.backendless.app",
+          androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
+        );
+        debugPrint('Backendless initialized for mobile');
+      }
+      _isInitialized = true;
+    } catch (e) {
+      debugPrint('Error initializing Backendless: $e');
+      // Try a fallback initialization without platform detection
+      try {
+        Backendless.initApp(
+          applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+          customDomain: "toughquilt.backendless.app",
+          androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
+        );
+        debugPrint('Backendless initialized with fallback method');
+        _isInitialized = true;
+      } catch (fallbackError) {
+        debugPrint(
+            'Fallback Backendless initialization failed: $fallbackError');
+      }
     }
   }
 
@@ -38,6 +67,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await _ensureInitialized();
       final user = await Backendless.userService
           .login(email, password, stayLoggedIn: true);
       _currentUser = user;
@@ -58,6 +88,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await _ensureInitialized();
       final userService = Backendless.userService as dynamic;
       final user = await userService.loginWithGoogle(true);
 
@@ -83,6 +114,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await _ensureInitialized();
       final newUser = BackendlessUser()
         ..email = email
         ..password = password;
@@ -101,6 +133,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await _ensureInitialized();
       await Backendless.userService.logout();
       _currentUser = null;
       _errorMessage = null;
@@ -117,6 +150,7 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      await _ensureInitialized();
       debugPrint('Creating checkout session for plan type: $planType');
 
       // Get user token from Backendless

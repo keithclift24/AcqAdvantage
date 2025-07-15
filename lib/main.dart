@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -7,8 +8,18 @@ import 'screens/login_screen.dart';
 import 'theme.dart';
 
 void main() {
-  Stripe.publishableKey =
-      'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
+  try {
+    // Only initialize Stripe for mobile platforms
+    if (!kIsWeb) {
+      Stripe.publishableKey =
+          'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
+      debugPrint('Stripe initialized for mobile');
+    } else {
+      debugPrint('Skipping Stripe initialization for web');
+    }
+  } catch (e) {
+    debugPrint('Error initializing Stripe: $e');
+  }
   runApp(const AcqAdvantageApp());
 }
 
