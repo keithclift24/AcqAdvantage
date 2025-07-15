@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart'; // Import this for debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -15,11 +15,11 @@ class AuthProvider extends ChangeNotifier {
   bool get isAuthenticated => _currentUser != null;
 
   AuthProvider() {
-    // CORRECTED INITIALIZATION
+    // Correct way to initialize with a custom domain for this SDK version
     Backendless.initApp(
       applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+      customDomain: "toughquilt.backendless.app", // THE FIX
       androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
-      serverUrl: "https://toughquilt.backendless.app", // THE FIX
     );
   }
 
@@ -27,7 +27,8 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final user = await Backendless.userService.login(email, password, true);
+      final user = await Backendless.userService
+          .login(email, password, stayLoggedIn: true);
       _currentUser = user;
       final userToken = await Backendless.userService.getUserToken();
       if (userToken != null) {
@@ -46,16 +47,12 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // CORRECTED GOOGLE LOGIN
   Future<bool> loginWithGoogle() async {
     _isLoading = true;
     notifyListeners();
     try {
-      final user = await Backendless.userService.loginWithOAuth2(
-        'googleplus',
-        {},
-        true,
-      );
+      final userService = Backendless.userService as dynamic;
+      final user = await userService.loginWithGoogle(true);
 
       if (user != null) {
         _currentUser = user;
@@ -86,9 +83,7 @@ class AuthProvider extends ChangeNotifier {
       final newUser = BackendlessUser()
         ..email = email
         ..password = password;
-      final user = await Backendless.userService.register(newUser);
-      _currentUser = user;
-      // You can now log the user in to get a token after registration
+      await Backendless.userService.register(newUser);
       return await loginWithEmail(email, password);
     } catch (e) {
       debugPrint('Registration error: $e');
@@ -115,6 +110,4 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // Other methods like recoverPassword can remain as you had them
-}
+} // <-- The missing closing brace
