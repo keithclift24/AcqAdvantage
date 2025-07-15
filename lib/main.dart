@@ -8,7 +8,7 @@ import 'theme.dart';
 
 void main() {
   Stripe.publishableKey =
-      'pk_test_...'; // Placeholder for Stripe publishable key
+      'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
   runApp(const AcqAdvantageApp());
 }
 
