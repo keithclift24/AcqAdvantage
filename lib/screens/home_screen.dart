@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:acquisitionpro/widgets/page_scaffold.dart';
 import 'subscription_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -6,14 +7,15 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PageScaffold(
+      title: 'Home',
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
               'Welcome!',
-              style: TextStyle(fontSize: 24.0),
+              style: TextStyle(fontSize: 24.0, color: Colors.white),
             ),
             const SizedBox(height: 30),
             ElevatedButton(

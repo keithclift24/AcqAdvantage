@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:acquisitionpro/widgets/page_scaffold.dart';
 import '../providers/auth_provider.dart';
 
 class SubscriptionScreen extends StatelessWidget {
@@ -7,11 +8,8 @@ class SubscriptionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Choose Your Plan'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
+    return PageScaffold(
+      title: 'Choose Your Plan',
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           return Padding(
@@ -37,7 +35,7 @@ class SubscriptionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          '\$29.99/month',
+                          '\$9.99 / month',
                           style: TextStyle(
                             fontSize: 20,
                             color: Colors.green,
@@ -109,7 +107,7 @@ class SubscriptionScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
-                                'SAVE 20%',
+                                'SAVE 17%',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -121,7 +119,7 @@ class SubscriptionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 10),
                         const Text(
-                          '\$287.99/year',
+                          '\$99.99 / year',
                           style: TextStyle(
                             fontSize: 20,
                             color: Colors.green,
