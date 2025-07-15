@@ -1,6 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -104,6 +107,58 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
     } catch (e) {
       debugPrint('Logout error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> createCheckoutSession(String planType) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      // Get user token from secure storage
+      final userToken = await _secureStorage.read(key: 'user-token');
+
+      if (userToken == null || _currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Make POST request to create checkout session
+      final response = await http.post(
+        Uri.parse(
+            'https://acqadvantage-api.onrender.com/create-checkout-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'user-token': userToken,
+          'objectId': _currentUser!.getProperty('objectId'),
+          'planType': planType,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final sessionId = responseData['sessionId'];
+
+        // Launch Stripe checkout URL
+        final checkoutUrl = 'https://checkout.stripe.com/pay/$sessionId';
+        final uri = Uri.parse(checkoutUrl);
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          throw Exception('Could not launch checkout URL');
+        }
+      } else {
+        throw Exception('Failed to create checkout session: ${response.body}');
+      }
+
+      _errorMessage = null;
+    } catch (e) {
+      debugPrint('Checkout session error: $e');
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;
