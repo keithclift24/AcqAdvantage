@@ -1,0 +1,484 @@
+// File: c:\keithclift24\AcqAdvantage\lib\main.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'providers/auth_provider.dart';
+import 'screens/login_screen.dart';
+import 'theme.dart';
+
+void main() {
+  runApp(const AcqAdvantageApp());
+}
+
+class AcqAdvantageApp extends StatelessWidget {
+  const AcqAdvantageApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: MaterialApp(
+        title: 'AcqAdvantage',
+        theme: appTheme,
+        home: const LoginScreen(),
+        debugShowCheckedModeBanner: false,
+      ),
+    );
+  }
+}
+
+
+// File: c:\keithclift24\AcqAdvantage\lib\providers\auth_provider.dart
+import 'package:flutter/material.dart';
+import 'package:backendless_sdk/backendless_sdk.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class AuthProvider extends ChangeNotifier {
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  BackendlessUser? _currentUser;
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // Public getters
+  BackendlessUser? get currentUser => _currentUser;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  bool get isAuthenticated => _currentUser != null;
+
+  AuthProvider() {
+    Backendless.initApp(
+      applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
+      androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
+    );
+  }
+
+  Future<bool> loginWithEmail(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final user = await Backendless.userService
+          .login(email, password, stayLoggedIn: true);
+      _currentUser = user;
+      _errorMessage = null;
+
+      // Get the user-token property from the returned user object
+      final userDynamic = user as dynamic;
+      if (userDynamic.userToken != null) {
+        // Use FlutterSecureStorage to save the token with the key 'user-token'
+        await _secureStorage.write(
+            key: 'user-token', value: userDynamic.userToken as String);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Login error: $e');
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> loginWithGoogle() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Use dynamic invocation to call the Google login method
+      final userService = Backendless.userService as dynamic;
+      final user = await userService.loginWithGoogle(true) as BackendlessUser;
+      _currentUser = user;
+      _errorMessage = null;
+
+      // Get the user-token property from the returned user object
+      final userDynamic = user as dynamic;
+      if (userDynamic.userToken != null) {
+        // Use FlutterSecureStorage to save the token with the key 'user-token'
+        await _secureStorage.write(
+            key: 'user-token', value: userDynamic.userToken as String);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Google login error: $e');
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> registerWithEmail(String email, String password) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final newUser = BackendlessUser();
+      newUser.email = email;
+      newUser.password = password;
+
+      final user = await Backendless.userService.register(newUser);
+      _currentUser = user;
+      _errorMessage = null;
+
+      // Get the user-token property from the returned user object
+      final userDynamic = user as dynamic;
+      if (userDynamic.userToken != null) {
+        // Use FlutterSecureStorage to save the token with the key 'user-token'
+        await _secureStorage.write(
+            key: 'user-token', value: userDynamic.userToken as String);
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Registration error: $e');
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> recoverPassword(String email) async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await Backendless.userService.restorePassword(email);
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      debugPrint('Password recovery error: $e');
+      _errorMessage = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await Backendless.userService.logout();
+      await _secureStorage.delete(key: 'user-token');
+      _currentUser = null;
+      _errorMessage = null;
+    } catch (e) {
+      debugPrint('Logout error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+
+
+// File: c:\keithclift24\AcqAdvantage\lib\screens\home_screen.dart
+import 'package:flutter/material.dart';
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: Text(
+          'Welcome!',
+          style: TextStyle(fontSize: 24.0),
+        ),
+      ),
+    );
+  }
+}
+
+
+// File: c:\keithclift24\AcqAdvantage\lib\screens\login_screen.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import 'home_screen.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background image container covering entire screen
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background.png'),
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          // Center widget with login form
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      child: Container(
+                        padding: const EdgeInsets.all(32.0),
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(16.0),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Logo
+                              Image.asset(
+                                'assets/images/acqadvantagelogotransparent.png',
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Title
+                              const Text(
+                                'ACCOUNT LOGIN',
+                                style: TextStyle(
+                                  fontSize: 24.0,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Email TextField
+                              TextField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(
+                                  labelText: 'Email',
+                                ),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Password TextField
+                              TextField(
+                                controller: _passwordController,
+                                obscureText: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Password',
+                                ),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Login Button
+                              ElevatedButton(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () async {
+                                        final authProvider =
+                                            Provider.of<AuthProvider>(context,
+                                                listen: false);
+                                        final success =
+                                            await authProvider.loginWithEmail(
+                                          _emailController.text.trim(),
+                                          _passwordController.text,
+                                        );
+
+                                        if (mounted) {
+                                          if (success) {
+                                            if (context.mounted) {
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const HomeScreen(),
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(authProvider
+                                                          .errorMessage ??
+                                                      'Login failed'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        }
+                                      },
+                                child: authProvider.isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.white),
+                                        ),
+                                      )
+                                    : const Text('Login'),
+                              ),
+                              const SizedBox(height: 16.0),
+
+                              // Google Connect Button
+                              OutlinedButton(
+                                onPressed: authProvider.isLoading
+                                    ? null
+                                    : () async {
+                                        final authProvider =
+                                            Provider.of<AuthProvider>(context,
+                                                listen: false);
+                                        final success = await authProvider
+                                            .loginWithGoogle();
+
+                                        if (mounted) {
+                                          if (success) {
+                                            if (context.mounted) {
+                                              Navigator.of(context)
+                                                  .pushReplacement(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const HomeScreen(),
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(authProvider
+                                                          .errorMessage ??
+                                                      'Google login failed'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        }
+                                      },
+                                child: authProvider.isLoading
+                                    ? const Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                          SizedBox(width: 8.0),
+                                          Text('Connecting...'),
+                                        ],
+                                      )
+                                    : Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Image.asset(
+                                            'assets/images/google_icon.png',
+                                            height: 24.0,
+                                            width: 24.0,
+                                          ),
+                                          const SizedBox(width: 8.0),
+                                          const Text('Connect with Google'),
+                                        ],
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Loading overlay
+                  if (authProvider.isLoading)
+                    Container(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+// File: c:\keithclift24\AcqAdvantage\lib\theme.dart
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+final ThemeData appTheme = ThemeData(
+  brightness: Brightness.dark,
+  scaffoldBackgroundColor: const Color(0xFF1A202C),
+  textTheme: GoogleFonts.montserratTextTheme(
+    ThemeData.dark().textTheme,
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    focusedBorder: OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFFE53E3E)),
+      borderRadius: BorderRadius.circular(8.0),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderSide: const BorderSide(color: Color(0xFFE53E3E)),
+      borderRadius: BorderRadius.circular(8.0),
+    ),
+  ),
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF00B5D8),
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+    ),
+  ),
+);
+
+
