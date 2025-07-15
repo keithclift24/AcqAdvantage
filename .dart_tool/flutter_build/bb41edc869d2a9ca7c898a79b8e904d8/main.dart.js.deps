@@ -534,6 +534,18 @@ file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/l
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib/src/typed_queue.dart
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib/typed_buffers.dart
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib/typed_data.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/src/legacy_api.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/src/type_conversion.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/src/types.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/src/url_launcher_string.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/src/url_launcher_uri.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/url_launcher.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher-6.3.2/lib/url_launcher_string.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_platform_interface-2.3.2/lib/link.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_platform_interface-2.3.2/lib/method_channel_url_launcher.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_platform_interface-2.3.2/lib/src/types.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_platform_interface-2.3.2/lib/src/url_launcher_platform.dart
+file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_platform_interface-2.3.2/lib/url_launcher_platform_interface.dart
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/uuid-4.5.1/lib/constants.dart
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/uuid-4.5.1/lib/data.dart
 file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/uuid-4.5.1/lib/enums.dart
@@ -1424,6 +1436,7 @@ file:///C:/keithclift24/AcqAdvantage/lib/main.dart
 file:///C:/keithclift24/AcqAdvantage/lib/providers/auth_provider.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/home_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/login_screen.dart
+file:///C:/keithclift24/AcqAdvantage/lib/screens/subscription_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/theme.dart
 org-dartlang-sdk:///dart-sdk/lib/_http/crypto.dart
 org-dartlang-sdk:///dart-sdk/lib/_http/embedder_config.dart
