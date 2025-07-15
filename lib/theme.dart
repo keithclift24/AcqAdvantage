@@ -16,6 +16,7 @@ final ThemeData appTheme = ThemeData(
       borderSide: const BorderSide(color: Color(0xFFE53E3E)),
       borderRadius: BorderRadius.circular(8.0),
     ),
+    labelStyle: const TextStyle(color: Colors.black54),
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(

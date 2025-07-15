@@ -118,14 +118,23 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
+      debugPrint('Creating checkout session for plan type: $planType');
+
       // Get user token from secure storage
       final userToken = await _secureStorage.read(key: 'user-token');
+      debugPrint('User token retrieved: ${userToken != null ? 'Yes' : 'No'}');
 
       if (userToken == null || _currentUser == null) {
+        debugPrint(
+            'User not authenticated - userToken: $userToken, currentUser: $_currentUser');
         throw Exception('User not authenticated');
       }
 
+      final objectId = _currentUser!.getProperty('objectId');
+      debugPrint('User objectId: $objectId');
+
       // Make POST request to create checkout session
+      debugPrint('Making POST request to API...');
       final response = await http.post(
         Uri.parse(
             'https://acqadvantage-api.onrender.com/create-checkout-session'),
@@ -134,25 +143,34 @@ class AuthProvider extends ChangeNotifier {
         },
         body: jsonEncode({
           'user-token': userToken,
-          'objectId': _currentUser!.getProperty('objectId'),
+          'objectId': objectId,
           'planType': planType,
         }),
       );
 
+      debugPrint('API response status: ${response.statusCode}');
+      debugPrint('API response body: ${response.body}');
+
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
         final sessionId = responseData['sessionId'];
+        debugPrint('Received sessionId from API: $sessionId');
 
         // Launch Stripe checkout URL
         final checkoutUrl = 'https://checkout.stripe.com/pay/$sessionId';
         final uri = Uri.parse(checkoutUrl);
+        debugPrint('Launching Stripe checkout URL: $checkoutUrl');
 
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('Stripe checkout URL launched successfully');
         } else {
+          debugPrint('Could not launch checkout URL: $checkoutUrl');
           throw Exception('Could not launch checkout URL');
         }
       } else {
+        debugPrint(
+            'Failed to create checkout session - Status: ${response.statusCode}, Body: ${response.body}');
         throw Exception('Failed to create checkout session: ${response.body}');
       }
 

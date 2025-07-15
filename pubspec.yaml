@@ -21,6 +21,7 @@ dependencies:
   backendless_sdk: ^8.0.0-alpha.33
   flutter_secure_storage: ^9.2.2
   url_launcher: ^6.1.11
+  flutter_stripe: ^10.1.1
   
 dev_dependencies:
   flutter_test:

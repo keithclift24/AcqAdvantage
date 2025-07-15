@@ -69,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(
                                   fontSize: 24.0,
                                   fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
                                 ),
                               ),
                               const SizedBox(height: 16.0),
@@ -213,7 +214,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                             width: 24.0,
                                           ),
                                           const SizedBox(width: 8.0),
-                                          const Text('Connect with Google'),
+                                          const Text(
+                                            'Connect with Google',
+                                            style: TextStyle(
+                                                color: Colors.black87),
+                                          ),
                                         ],
                                       ),
                               ),
