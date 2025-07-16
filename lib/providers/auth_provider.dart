@@ -220,7 +220,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await _ensureInitialized();
       final queryBuilder = DataQueryBuilder()
-        ..whereClause = "ownerId = '${_currentUser!.getObjectId()}'";
+        ..whereClause = "ownerId.objectId = '${_currentUser!.getObjectId()}'";
       final subscriptions = await Backendless.data
           .of('Subscriptions')
           .find(queryBuilder: queryBuilder);
