@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/chat_provider.dart';
 import 'chat_screen.dart';
 import 'apply_screen.dart';
 import 'learn_screen.dart';
@@ -19,10 +17,7 @@ class _AppShellState extends State<AppShell> {
   int _selectedIndex = 0;
 
   static final List<Widget> _widgetOptions = <Widget>[
-    ChangeNotifierProvider(
-      create: (_) => ChatProvider(),
-      child: const ChatScreen(),
-    ),
+    const ChatScreen(),
     const ApplyScreen(),
     const LearnScreen(),
     const CiteScreen(),

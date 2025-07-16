@@ -1,9 +1,6 @@
 # Build artifacts
 /build/
 
-# Dart tool files
-/.dart_tool/
-
 # Miscellaneous
 *.class
 *.log

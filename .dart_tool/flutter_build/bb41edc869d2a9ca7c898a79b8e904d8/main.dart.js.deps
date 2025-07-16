@@ -1541,15 +1541,12 @@ file:///C:/keithclift24/AcqAdvantage/lib/screens/app_shell.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/apply_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/chat_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/cite_screen.dart
-file:///C:/keithclift24/AcqAdvantage/lib/screens/home_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/learn_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/login_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/simplify_screen.dart
-file:///C:/keithclift24/AcqAdvantage/lib/screens/subscription_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/screens/tools_screen.dart
 file:///C:/keithclift24/AcqAdvantage/lib/theme.dart
 file:///C:/keithclift24/AcqAdvantage/lib/widgets/chat_message_bubble.dart
-file:///C:/keithclift24/AcqAdvantage/lib/widgets/page_scaffold.dart
 org-dartlang-sdk:///dart-sdk/lib/_http/crypto.dart
 org-dartlang-sdk:///dart-sdk/lib/_http/embedder_config.dart
 org-dartlang-sdk:///dart-sdk/lib/_http/http.dart
