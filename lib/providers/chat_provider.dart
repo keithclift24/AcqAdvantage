@@ -45,6 +45,32 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> resetChat(BackendlessUser? user) async {
+    if (user == null) return;
+
+    final url = Uri.parse('https://acqadvantage-api.onrender.com/reset_thread');
+    final userToken = await Backendless.userService.getUserToken();
+
+    try {
+      await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'user-token': userToken!,
+        },
+        body: json.encode({'objectId': user.getProperty('objectId')}),
+      );
+    } catch (e) {
+      debugPrint('Error resetting chat: $e');
+    }
+
+    _messages.clear();
+    _messages.add(ChatMessage(
+        text: "Hello! How can I help you today?", isFromUser: false));
+    await initializeChat(user);
+    notifyListeners();
+  }
+
   Future<void> sendMessage(String text, BackendlessUser? user) async {
     if (user == null || _threadId == null) return;
 

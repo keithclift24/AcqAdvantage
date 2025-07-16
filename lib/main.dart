@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 
 import 'providers/auth_provider.dart';
+import 'providers/chat_provider.dart';
+import 'screens/app_shell.dart';
 import 'screens/login_screen.dart';
 import 'theme.dart';
 
@@ -31,11 +33,18 @@ class AcqAdvantageApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(
         title: 'AcqAdvantage',
         theme: appTheme,
-        home: const LoginScreen(),
+        home: Consumer<AuthProvider>(
+          builder: (context, auth, _) {
+            return auth.currentUser == null
+                ? const LoginScreen()
+                : const AppShell();
+          },
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );

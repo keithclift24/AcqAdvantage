@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/chat_message.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../widgets/chat_message_bubble.dart';
@@ -38,7 +37,10 @@ class _ChatScreenState extends State<ChatScreen> {
               IconButton(
                 icon: const Icon(Icons.add_comment_outlined),
                 onPressed: () {
-                  // TODO: Implement New Chat functionality
+                  final authProvider =
+                      Provider.of<AuthProvider>(context, listen: false);
+                  Provider.of<ChatProvider>(context, listen: false)
+                      .resetChat(authProvider.currentUser);
                 },
               ),
             ],
