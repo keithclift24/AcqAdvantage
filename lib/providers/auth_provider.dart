@@ -186,11 +186,7 @@ class AuthProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        final sessionId = responseData['sessionId'];
-        debugPrint('Received sessionId from API: $sessionId');
-
-        // Launch Stripe checkout URL
-        final checkoutUrl = 'https://checkout.stripe.com/pay/$sessionId';
+        final checkoutUrl = responseData['checkout_url'];
         final uri = Uri.parse(checkoutUrl);
         debugPrint('Launching Stripe checkout URL: $checkoutUrl');
 
