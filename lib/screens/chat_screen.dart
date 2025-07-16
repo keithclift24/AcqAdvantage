@@ -130,7 +130,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(BuildContext context, String text) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    context.read<ChatProvider>().sendMessage(text, authProvider.currentUser);
+    context
+        .read<ChatProvider>()
+        .sendMessage(text, authProvider.currentUser, authProvider);
     _textController.clear();
   }
 

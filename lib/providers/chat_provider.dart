@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
+import 'auth_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
   final List<ChatMessage> _messages = [
@@ -71,8 +72,17 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String text, BackendlessUser? user) async {
+  Future<void> sendMessage(
+      String text, BackendlessUser? user, AuthProvider authProvider) async {
     if (user == null || _threadId == null) return;
+
+    if (!authProvider.isSubscribed) {
+      _messages.add(ChatMessage(
+          text: 'Please subscribe to use this feature.', isFromUser: false));
+      notifyListeners();
+      _scrollToBottom();
+      return;
+    }
 
     // Add user's message to the list
     _messages.add(ChatMessage(text: text, isFromUser: true));

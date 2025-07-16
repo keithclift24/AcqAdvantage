@@ -9,6 +9,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isInitialized = false;
+  bool isSubscribed = false;
 
   // Public getters
   BackendlessUser? get currentUser => _currentUser;
@@ -212,4 +213,32 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-} // <-- The missing closing brace
+
+  Future<void> checkSubscriptionStatus() async {
+    if (_currentUser == null) return;
+
+    try {
+      await _ensureInitialized();
+      final queryBuilder = DataQueryBuilder()
+        ..whereClause = "ownerId = '${_currentUser!.getObjectId()}'";
+      final subscriptions = await Backendless.data
+          .of('Subscriptions')
+          .find(queryBuilder: queryBuilder);
+
+      if (subscriptions != null && subscriptions.isNotEmpty) {
+        final status = subscriptions.first!['status'];
+        if (status == 'active' || status == 'trialing') {
+          isSubscribed = true;
+        } else {
+          isSubscribed = false;
+        }
+      } else {
+        isSubscribed = false;
+      }
+    } catch (e) {
+      debugPrint('Error checking subscription status: $e');
+      isSubscribed = false;
+    }
+    notifyListeners();
+  }
+}
