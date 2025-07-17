@@ -3,6 +3,7 @@ import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 class AuthProvider extends ChangeNotifier {
   BackendlessUser? _currentUser;
@@ -207,6 +208,119 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
     } catch (e) {
       debugPrint('Checkout session error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> redirectToCheckout(String planType) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _ensureInitialized();
+      debugPrint('Creating checkout session for plan type: $planType');
+
+      // Get user token from Backendless
+      final userToken = await Backendless.userService.getUserToken();
+      debugPrint('User token retrieved: ${userToken != null ? 'Yes' : 'No'}');
+
+      if (userToken == null || _currentUser == null) {
+        debugPrint(
+            'User not authenticated - userToken: $userToken, currentUser: $_currentUser');
+        throw Exception('User not authenticated');
+      }
+
+      final objectId = _currentUser!.getProperty('objectId');
+      final customerEmail = _currentUser!.email;
+      debugPrint('User objectId: $objectId');
+      debugPrint('Customer email: $customerEmail');
+
+      // Make POST request to create checkout session with new redirect URLs
+      debugPrint('Making POST request to API...');
+      final response = await http.post(
+        Uri.parse(
+            'https://acqadvantage-api.onrender.com/create-checkout-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'user-token': userToken,
+          'objectId': objectId,
+          'planType': planType,
+          'successUrl':
+              'https://acqadvantage.com/?session_id={CHECKOUT_SESSION_ID}',
+          'cancelUrl': 'https://acqadvantage.com',
+          'customerEmail': customerEmail,
+        }),
+      );
+
+      debugPrint('API response status: ${response.statusCode}');
+      debugPrint('API response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final checkoutUrl = responseData['checkout_url'];
+        final uri = Uri.parse(checkoutUrl);
+        debugPrint('Launching Stripe checkout URL: $checkoutUrl');
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('Stripe checkout URL launched successfully');
+        } else {
+          debugPrint('Could not launch checkout URL: $checkoutUrl');
+          throw Exception('Could not launch checkout URL');
+        }
+      } else {
+        debugPrint(
+            'Failed to create checkout session - Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('Failed to create checkout session: ${response.body}');
+      }
+
+      _errorMessage = null;
+    } catch (e) {
+      debugPrint('Redirect to checkout error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyPaymentSession(String sessionId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _ensureInitialized();
+      debugPrint('Verifying payment session: $sessionId');
+
+      // Make POST request to verify payment session
+      final response = await http.post(
+        Uri.parse(
+            'https://acqadvantage-api.onrender.com/verify-payment-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'sessionId': sessionId,
+        }),
+      );
+
+      debugPrint('Verify payment response status: ${response.statusCode}');
+      debugPrint('Verify payment response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        debugPrint('Payment session verified successfully: $responseData');
+        _errorMessage = null;
+      } else {
+        debugPrint(
+            'Failed to verify payment session - Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('Failed to verify payment session: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Verify payment session error: $e');
       _errorMessage = e.toString();
     } finally {
       _isLoading = false;

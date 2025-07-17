@@ -54,8 +54,7 @@ class SubscriptionScreen extends StatelessWidget {
                             onPressed: authProvider.isLoading
                                 ? null
                                 : () {
-                                    authProvider
-                                        .createCheckoutSession('monthly');
+                                    authProvider.redirectToCheckout('monthly');
                                   },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -146,8 +145,7 @@ class SubscriptionScreen extends StatelessWidget {
                             onPressed: authProvider.isLoading
                                 ? null
                                 : () {
-                                    authProvider
-                                        .createCheckoutSession('annual');
+                                    authProvider.redirectToCheckout('annual');
                                   },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 15),

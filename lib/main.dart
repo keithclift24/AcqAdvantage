@@ -11,13 +11,13 @@ import 'theme.dart';
 
 void main() {
   try {
-    // Only initialize Stripe for mobile platforms
-    if (!kIsWeb) {
-      Stripe.publishableKey =
-          'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
-      debugPrint('Stripe initialized for mobile');
+    // Initialize Stripe for all platforms
+    Stripe.publishableKey =
+        'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
+    if (kIsWeb) {
+      debugPrint('Stripe initialized for web');
     } else {
-      debugPrint('Skipping Stripe initialization for web');
+      debugPrint('Stripe initialized for mobile');
     }
   } catch (e) {
     debugPrint('Error initializing Stripe: $e');
