@@ -7576,7 +7576,7 @@ eU:function eU(a){var _=this
 _.a=null
 _.b=!1
 _.c=null
-_.d=!1
+_.e=_.d=!1
 _.Y$=0
 _.O$=a
 _.aq$=_.aw$=0},
@@ -40603,13 +40603,16 @@ case 8:l=b
 if(l!=null&&J.nZ(l)){h=J.H2(l)
 h.toString
 k=J.b8(h,"status")
-if(!J.d(k,"active"))J.d(k,"trialing")}p=2
+if(J.d(k,"active")||J.d(k,"trialing"))n.e=!0
+else n.e=!1}else n.e=!1
+p=2
 s=6
 break
 case 4:p=3
 f=o.pop()
 j=A.a8(f)
 A.ct().$1("Error checking subscription status: "+A.l(j))
+n.e=!1
 s=6
 break
 case 3:s=2
@@ -40824,8 +40827,8 @@ s.toString
 A.l4(s,!1,t.W0).rZ()},
 $S:6}
 A.alG.prototype={
-$3(a,b,c){var s=null
-return A.m2(A.b([B.TS,B.Ou,A.Jj(B.U2,new A.alE(a),A.Jk(s,s,B.de,s,s,s,s,s,s,B.k,s,s,B.mC,s,s,s,s,s,s,s)),B.ks,A.Jj(B.U6,new A.alF(a),A.Jk(s,s,B.fW,s,s,s,s,s,s,B.k,s,s,B.mC,s,s,s,s,s,s,s))],t.p),B.aa,B.dd,B.aS)},
+$3(a,b,c){var s=null,r=A.Jj(B.U2,new A.alE(a),A.Jk(s,s,B.de,s,s,s,s,s,s,B.k,s,s,B.mC,s,s,s,s,s,s,s)),q=b.e?new A.alF(a):s
+return A.m2(A.b([B.TS,B.Ou,r,B.ks,A.Jj(B.U6,q,A.Jk(s,s,B.fW,s,s,s,s,s,s,B.k,s,s,B.mC,s,s,s,s,s,s,s))],t.p),B.aa,B.dd,B.aS)},
 $S:491}
 A.alE.prototype={
 $0(){var s=A.L5(new A.alD(),null,t.z)
