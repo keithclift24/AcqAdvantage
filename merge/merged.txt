@@ -74,6 +74,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isInitialized = false;
+  bool isSubscribed = false;
 
   // Public getters
   BackendlessUser? get currentUser => _currentUser;
@@ -277,7 +278,35 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-} // <-- The missing closing brace
+
+  Future<void> checkSubscriptionStatus() async {
+    if (_currentUser == null) return;
+
+    try {
+      await _ensureInitialized();
+      final queryBuilder = DataQueryBuilder()
+        ..whereClause = "ownerId.objectId = '${_currentUser!.getObjectId()}'";
+      final subscriptions = await Backendless.data
+          .of('Subscriptions')
+          .find(queryBuilder: queryBuilder);
+
+      if (subscriptions != null && subscriptions.isNotEmpty) {
+        final status = subscriptions.first!['status'];
+        if (status == 'active' || status == 'trialing') {
+          isSubscribed = true;
+        } else {
+          isSubscribed = false;
+        }
+      } else {
+        isSubscribed = false;
+      }
+    } catch (e) {
+      debugPrint('Error checking subscription status: $e');
+      isSubscribed = false;
+    }
+    notifyListeners();
+  }
+}
 
 
 // File: c:\keithclift24\AcqAdvantage\lib\providers\chat_provider.dart
@@ -286,6 +315,7 @@ import 'package:flutter/material.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:http/http.dart' as http;
 import '../models/chat_message.dart';
+import 'auth_provider.dart';
 
 class ChatProvider extends ChangeNotifier {
   final List<ChatMessage> _messages = [
@@ -354,8 +384,17 @@ class ChatProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> sendMessage(String text, BackendlessUser? user) async {
+  Future<void> sendMessage(
+      String text, BackendlessUser? user, AuthProvider authProvider) async {
     if (user == null || _threadId == null) return;
+
+    // if (!authProvider.isSubscribed) {
+    //   _messages.add(ChatMessage(
+    //       text: 'Please subscribe to use this feature.', isFromUser: false));
+    //   notifyListeners();
+    //   _scrollToBottom();
+    //   return;
+    // }
 
     // Add user's message to the list
     _messages.add(ChatMessage(text: text, isFromUser: true));
@@ -643,7 +682,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _sendMessage(BuildContext context, String text) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    context.read<ChatProvider>().sendMessage(text, authProvider.currentUser);
+    context
+        .read<ChatProvider>()
+        .sendMessage(text, authProvider.currentUser, authProvider);
     _textController.clear();
   }
 
@@ -674,46 +715,90 @@ class CiteScreen extends StatelessWidget {
 
 // File: c:\keithclift24\AcqAdvantage\lib\screens\home_screen.dart
 import 'package:flutter/material.dart';
-import 'package:acquisitionpro/widgets/page_scaffold.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../widgets/page_scaffold.dart';
+import 'app_shell.dart';
 import 'subscription_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthProvider>(context, listen: false)
+          .checkSubscriptionStatus();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return PageScaffold(
       title: 'Home',
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Welcome!',
-              style: TextStyle(fontSize: 24.0, color: Colors.white),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SubscriptionScreen(),
+        child: Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'Welcome!',
+                  style: TextStyle(fontSize: 24.0, color: Colors.white),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SubscriptionScreen(),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 15),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text(
-                'View Subscription Plans',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
+                  child: const Text(
+                    'View Subscription Plans',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: authProvider.isSubscribed
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const AppShell(),
+                            ),
+                          );
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 30, vertical: 15),
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text(
+                    'Enter AcqAdvantage',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
@@ -742,7 +827,7 @@ class LearnScreen extends StatelessWidget {
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'app_shell.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -858,7 +943,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   .pushReplacement(
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      const AppShell(),
+                                                      const HomeScreen(),
                                                 ),
                                               );
                                             }
@@ -910,7 +995,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                                   .pushReplacement(
                                                 MaterialPageRoute(
                                                   builder: (context) =>
-                                                      const AppShell(),
+                                                      const HomeScreen(),
                                                 ),
                                               );
                                             }

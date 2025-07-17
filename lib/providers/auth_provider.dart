@@ -32,7 +32,6 @@ class AuthProvider extends ChangeNotifier {
         // Web initialization using JavaScript API key
         Backendless.initApp(
           applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-          customDomain: "toughquilt.backendless.app",
           androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
         );
         debugPrint('Backendless initialized for web');
@@ -40,7 +39,6 @@ class AuthProvider extends ChangeNotifier {
         // Mobile initialization using Android API key
         Backendless.initApp(
           applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-          customDomain: "toughquilt.backendless.app",
           androidApiKey: "AEA2107E-C9A9-416E-B13A-F6797EEAB4DE",
         );
         debugPrint('Backendless initialized for mobile');
@@ -52,7 +50,6 @@ class AuthProvider extends ChangeNotifier {
       try {
         Backendless.initApp(
           applicationId: "0EB3F73D-1225-30F9-FFB8-CFD226E65F00",
-          customDomain: "toughquilt.backendless.app",
           androidApiKey: "0FF7C923-0152-4765-9CFC-05EE6D697A14",
         );
         debugPrint('Backendless initialized with fallback method');
