@@ -111,34 +111,35 @@ class ChatProvider extends ChangeNotifier {
       final buffer = StringBuffer();
 
       streamedResponse.stream.transform(utf8.decoder).listen((chunk) {
-        // Collect all chunks
         buffer.write(chunk);
-
-        // OPTIONAL: You can still have a simple "typing..." effect if you want
-        _messages.last.text = '...';
-        notifyListeners();
-        _scrollToBottom();
       }, onDone: () {
         _isLoading = false;
         try {
-          // When the stream is done, parse the complete string as JSON
+          // 1. Get the complete string from the buffer.
           final fullResponse = buffer.toString();
+
+          // 2. IMPORTANT: Parse the string into a JSON Map.
           final Map<String, dynamic> jsonData = json.decode(fullResponse);
 
-          // Update the last message with the structured data
+          // 3. Find the placeholder message we added earlier.
           final lastMessageIndex = _messages.length - 1;
+
+          // 4. Replace the placeholder with a NEW ChatMessage that has the correct type and data.
           _messages[lastMessageIndex] = ChatMessage(
-            text: 'Briefing Card response', // Placeholder text
+            text: 'Briefing Card received', // This text won't be displayed.
             isFromUser: false,
-            messageType: MessageType.briefingCard, // Set the type!
-            structuredData: jsonData, // Add the parsed JSON data!
+            messageType:
+                MessageType.briefingCard, // <-- This tells the UI what to do.
+            structuredData: jsonData, // <-- This passes the data to the widget.
           );
         } catch (e) {
-          // If parsing fails, it was probably just plain text or an error
+          // This is a fallback if the response ISN'T valid JSON.
           _messages.last.text = buffer.toString().isNotEmpty
               ? buffer.toString()
-              : 'Error: Empty response.';
+              : 'Error: Failed to get a valid response.';
+          debugPrint('JSON parsing failed: $e');
         }
+        // 5. Update the UI.
         notifyListeners();
       }, onError: (error) {
         _isLoading = false;
