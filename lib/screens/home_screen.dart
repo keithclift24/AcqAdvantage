@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/foundation.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/page_scaffold.dart';
 import 'app_shell.dart';

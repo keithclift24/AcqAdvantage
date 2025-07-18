@@ -9,7 +9,7 @@ class BriefingCardBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Safely access nested data with a helper function
-    T? _get<T>(List<String> path) {
+    T? get<T>(List<String> path) {
       dynamic current = data;
       for (var key in path) {
         if (current is Map<String, dynamic> && current.containsKey(key)) {
@@ -22,15 +22,15 @@ class BriefingCardBubble extends StatelessWidget {
     }
 
     final blufText =
-        _get<String>(['structured_reasoning_irac', 'conclusion']) ?? 'N/A';
+        get<String>(['structured_reasoning_irac', 'conclusion']) ?? 'N/A';
     final analysisText =
-        _get<String>(['structured_reasoning_irac', 'application']) ?? 'N/A';
-    final guidanceItems = _get<List<dynamic>>([
+        get<String>(['structured_reasoning_irac', 'application']) ?? 'N/A';
+    final guidanceItems = get<List<dynamic>>([
           'strategic_implications_and_recommendations',
           'key_takeaways_for_leadership'
         ]) ??
         [];
-    final faqItems = _get<List<dynamic>>([
+    final faqItems = get<List<dynamic>>([
           'strategic_implications_and_recommendations',
           'anticipated_follow_ups'
         ]) ??
@@ -45,7 +45,7 @@ class BriefingCardBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -56,8 +56,8 @@ class BriefingCardBubble extends StatelessWidget {
         children: [
           _CardHeader(
             title:
-                _get<String>(['response_framing', 'perspective']) ?? 'Analysis',
-            subtitle: _get<String>(['response_framing', 'target_audience']) ??
+                get<String>(['response_framing', 'perspective']) ?? 'Analysis',
+            subtitle: get<String>(['response_framing', 'target_audience']) ??
                 'Guidance',
           ),
           const SizedBox(height: 20),
@@ -79,7 +79,7 @@ class BriefingCardBubble extends StatelessWidget {
           const SizedBox(height: 20),
           _CardFooter(
               faqItems: faqItems,
-              authorities: _get<List<dynamic>>([
+              authorities: get<List<dynamic>>([
                     'source_analysis_and_hierarchy',
                     'controlling_authorities'
                   ]) ??
@@ -179,22 +179,20 @@ class _GuidanceSection extends StatelessWidget {
                 letterSpacing: 0.5),
           ),
           const SizedBox(height: 12),
-          ...items
-              .map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('🧠', style: TextStyle(fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                            child: Text(item.toString(),
-                                style: const TextStyle(
-                                    fontSize: 14, color: Color(0xFF344054)))),
-                      ],
-                    ),
-                  ))
-              .toList(),
+          ...items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('🧠', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(item.toString(),
+                            style: const TextStyle(
+                                fontSize: 14, color: Color(0xFF344054)))),
+                  ],
+                ),
+              )),
         ],
       ),
     );
