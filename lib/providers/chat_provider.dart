@@ -81,14 +81,6 @@ class ChatProvider extends ChangeNotifier {
       String text, BackendlessUser? user, AuthProvider authProvider) async {
     if (user == null || _threadId == null) return;
 
-    // if (!authProvider.isSubscribed) {
-    //   _messages.add(ChatMessage(
-    //       text: 'Please subscribe to use this feature.', isFromUser: false));
-    //   notifyListeners();
-    //   _scrollToBottom();
-    //   return;
-    // }
-
     // Add user's message to the list
     _messages.add(ChatMessage(text: text, isFromUser: true));
     _isLoading = true;

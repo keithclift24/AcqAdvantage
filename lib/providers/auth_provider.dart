@@ -328,30 +328,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> checkSubscriptionStatus() async {
-    if (_currentUser == null) return;
-
-    try {
-      await _ensureInitialized();
-      final queryBuilder = DataQueryBuilder()
-        ..whereClause = "ownerId.objectId = '${_currentUser!.getObjectId()}'";
-      final subscriptions = await Backendless.data
-          .of('Subscriptions')
-          .find(queryBuilder: queryBuilder);
-
-      if (subscriptions != null && subscriptions.isNotEmpty) {
-        final status = subscriptions.first!['status'];
-        if (status == 'active' || status == 'trialing') {
-          isSubscribed = true;
-        } else {
-          isSubscribed = false;
-        }
-      } else {
-        isSubscribed = false;
-      }
-    } catch (e) {
-      debugPrint('Error checking subscription status: $e');
-      isSubscribed = false;
-    }
+    // Temporarily disabled for testing - all users are considered subscribed
+    isSubscribed = true;
     notifyListeners();
   }
 }
