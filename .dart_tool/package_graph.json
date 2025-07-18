@@ -23,7 +23,7 @@
     },
     {
       "name": "flutter_lints",
-      "version": "3.0.2",
+      "version": "6.0.0",
       "dependencies": [
         "lints"
       ]
@@ -58,7 +58,7 @@
     },
     {
       "name": "flutter_stripe",
-      "version": "10.2.0",
+      "version": "11.5.0",
       "dependencies": [
         "flutter",
         "meta",
@@ -151,7 +151,7 @@
     },
     {
       "name": "lints",
-      "version": "3.0.0",
+      "version": "6.0.0",
       "dependencies": []
     },
     {
@@ -314,7 +314,7 @@
     },
     {
       "name": "stripe_platform_interface",
-      "version": "10.2.0",
+      "version": "11.5.0",
       "dependencies": [
         "flutter",
         "freezed_annotation",
@@ -325,14 +325,14 @@
     },
     {
       "name": "stripe_ios",
-      "version": "10.2.0",
+      "version": "11.5.0",
       "dependencies": [
         "flutter"
       ]
     },
     {
       "name": "stripe_android",
-      "version": "10.2.1",
+      "version": "11.5.0",
       "dependencies": [
         "flutter"
       ]

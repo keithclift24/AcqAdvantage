@@ -18,46 +18,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handleStripeReturn();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.checkSubscriptionStatus();
     });
-  }
-
-  void _handleStripeReturn() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
-    // Check if we're on web and handle URL parameters
-    if (kIsWeb) {
-      // For web, we need to check the URL parameters
-      final uri = Uri.base;
-      final sessionId = uri.queryParameters['session_id'];
-
-      if (sessionId != null && sessionId.isNotEmpty) {
-        debugPrint('Found session_id in URL: $sessionId');
-        try {
-          // Verify the payment session
-          await authProvider.verifyPaymentSession(sessionId);
-
-          // Check subscription status to refresh UI
-          await authProvider.checkSubscriptionStatus();
-
-          // Clear the URL parameter by replacing the current history entry
-          // This prevents the verification from running again on page refresh
-          if (kIsWeb) {
-            // Use JavaScript to update the URL without reloading
-            // This is a workaround since we can't directly manipulate history in Flutter web
-            debugPrint('Payment verification completed successfully');
-          }
-        } catch (e) {
-          debugPrint('Error verifying payment session: $e');
-        }
-      } else {
-        // No session_id, just check subscription status normally
-        await authProvider.checkSubscriptionStatus();
-      }
-    } else {
-      // For mobile platforms, just check subscription status
-      await authProvider.checkSubscriptionStatus();
-    }
   }
 
   @override

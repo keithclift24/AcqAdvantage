@@ -17,6 +17,11 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   ScrollController get scrollController => _scrollController;
 
+  void update(AuthProvider auth) {
+    // This method is called when AuthProvider changes.
+    // You can add logic here to react to auth changes if needed.
+  }
+
   Future<void> initializeChat(BackendlessUser? user) async {
     if (user == null) return;
 

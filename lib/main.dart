@@ -33,7 +33,10 @@ class AcqAdvantageApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, auth, chat) => chat!..update(auth),
+        ),
       ],
       child: MaterialApp(
         title: 'AcqAdvantage',

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/page_scaffold.dart';
 import 'chat_screen.dart';
 import 'apply_screen.dart';
 import 'learn_screen.dart';
@@ -25,6 +26,15 @@ class _AppShellState extends State<AppShell> {
     const ToolsScreen(),
   ];
 
+  static const List<String> _widgetTitles = <String>[
+    'Research',
+    'Apply',
+    'Learn',
+    'Cite',
+    'Simplify',
+    'Tools',
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -34,8 +44,11 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+      body: PageScaffold(
+        title: _widgetTitles[_selectedIndex],
+        body: Center(
+          child: _widgetOptions.elementAt(_selectedIndex),
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[

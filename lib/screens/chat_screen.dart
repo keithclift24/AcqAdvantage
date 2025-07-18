@@ -30,21 +30,6 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, chatProvider, child) {
         return Scaffold(
           backgroundColor: const Color(0xFF1A202C),
-          appBar: AppBar(
-            title: const Text('AcqAdvantage'),
-            backgroundColor: const Color(0xFF2D3748),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add_comment_outlined),
-                onPressed: () {
-                  final authProvider =
-                      Provider.of<AuthProvider>(context, listen: false);
-                  Provider.of<ChatProvider>(context, listen: false)
-                      .resetChat(authProvider.currentUser);
-                },
-              ),
-            ],
-          ),
           body: Column(
             children: [
               Expanded(

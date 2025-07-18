@@ -273,9 +273,9 @@
     },
     {
       "name": "flutter_lints",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-3.0.2",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "3.8"
     },
     {
       "name": "flutter_local_notifications",
@@ -333,9 +333,9 @@
     },
     {
       "name": "flutter_stripe",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_stripe-10.2.0",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_stripe-11.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.0"
     },
     {
       "name": "flutter_test",
@@ -435,9 +435,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/lints-3.0.0",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/lints-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.8"
     },
     {
       "name": "logging",
@@ -693,21 +693,21 @@
     },
     {
       "name": "stripe_android",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_android-10.2.1",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_android-11.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "stripe_ios",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_ios-10.2.0",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_ios-11.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.12"
+      "languageVersion": "3.0"
     },
     {
       "name": "stripe_platform_interface",
-      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_platform_interface-10.2.0",
+      "rootUri": "file:///C:/Users/keith/AppData/Local/Pub/Cache/hosted/pub.dev/stripe_platform_interface-11.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.0"
     },
     {
       "name": "synchronized",
