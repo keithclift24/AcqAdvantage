@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/chat_message.dart';
 
 class ChatMessageBubble extends StatelessWidget {
@@ -24,10 +25,16 @@ class ChatMessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(isUserMessage ? 0 : 16.0),
           ),
         ),
-        child: Text(
-          message.text,
-          style: const TextStyle(color: Colors.white),
-        ),
+        child: isUserMessage
+            ? Text(
+                message.text,
+                style: const TextStyle(color: Colors.white),
+              )
+            : MarkdownBody(
+                data: message.text,
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(p: const TextStyle(color: Colors.white)),
+              ),
       ),
     );
   }

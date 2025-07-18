@@ -21,6 +21,7 @@ dependencies:
   backendless_sdk: ^8.0.0-alpha.33
   url_launcher: ^6.1.11
   flutter_stripe: ^11.5.0
+  flutter_markdown: ^0.7.1
   
 dev_dependencies:
   flutter_test:
