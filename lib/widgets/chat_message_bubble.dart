@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/chat_message.dart';
+import 'briefing_card_bubble.dart'; // Import the new widget
 
 class ChatMessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -9,6 +10,14 @@ class ChatMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check the message type to decide which widget to render
+    if (message.messageType == MessageType.briefingCard &&
+        message.structuredData != null) {
+      // If it's a briefing card with data, show our new widget
+      return BriefingCardBubble(data: message.structuredData!);
+    }
+
+    // --- Otherwise, show the original text bubble ---
     final isUserMessage = message.isFromUser;
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,

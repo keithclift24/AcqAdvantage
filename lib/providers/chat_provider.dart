@@ -81,20 +81,18 @@ class ChatProvider extends ChangeNotifier {
       String text, BackendlessUser? user, AuthProvider authProvider) async {
     if (user == null || _threadId == null) return;
 
-    // Add user's message to the list
     _messages.add(ChatMessage(text: text, isFromUser: true));
     _isLoading = true;
     notifyListeners();
     _scrollToBottom();
 
-    // Add a placeholder for the assistant's response
+    // Add a placeholder for the assistant's response. We will update this object later.
     _messages.add(ChatMessage(text: '', isFromUser: false));
     notifyListeners();
     _scrollToBottom();
 
     final url = Uri.parse('https://acqadvantage-api.onrender.com/ask');
     final userToken = await Backendless.userService.getUserToken();
-
     final request = http.Request('POST', url)
       ..headers.addAll({
         'Content-Type': 'application/json',
@@ -109,12 +107,38 @@ class ChatProvider extends ChangeNotifier {
     try {
       final streamedResponse = await request.send();
 
+      // Use a StringBuffer to efficiently collect the chunks of the response
+      final buffer = StringBuffer();
+
       streamedResponse.stream.transform(utf8.decoder).listen((chunk) {
-        _messages.last.text += chunk;
+        // Collect all chunks
+        buffer.write(chunk);
+
+        // OPTIONAL: You can still have a simple "typing..." effect if you want
+        _messages.last.text = '...';
         notifyListeners();
         _scrollToBottom();
       }, onDone: () {
         _isLoading = false;
+        try {
+          // When the stream is done, parse the complete string as JSON
+          final fullResponse = buffer.toString();
+          final Map<String, dynamic> jsonData = json.decode(fullResponse);
+
+          // Update the last message with the structured data
+          final lastMessageIndex = _messages.length - 1;
+          _messages[lastMessageIndex] = ChatMessage(
+            text: 'Briefing Card response', // Placeholder text
+            isFromUser: false,
+            messageType: MessageType.briefingCard, // Set the type!
+            structuredData: jsonData, // Add the parsed JSON data!
+          );
+        } catch (e) {
+          // If parsing fails, it was probably just plain text or an error
+          _messages.last.text = buffer.toString().isNotEmpty
+              ? buffer.toString()
+              : 'Error: Empty response.';
+        }
         notifyListeners();
       }, onError: (error) {
         _isLoading = false;
