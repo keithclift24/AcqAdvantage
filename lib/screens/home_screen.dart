@@ -72,9 +72,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Text(
                   'Welcome!',
-                  style: TextStyle(fontSize: 24.0, color: Colors.white),
+                  style: TextStyle(fontSize: 48.0, color: Colors.white),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 60),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -87,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 15),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color.fromARGB(255, 56, 56, 62),
                     foregroundColor: Colors.white,
                   ),
                   child: const Text(
