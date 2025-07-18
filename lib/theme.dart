@@ -8,7 +8,6 @@ final ThemeData appTheme = ThemeData(
     primary: Color(0xFF00B5D8), // Cyan blue from your theme
     secondary: Color(0xFFE53E3E), // Red from your theme
     surface: Color(0xFF1A202C), // Background color
-    background: Color(0xFF1A202C), // Background color
   ),
   textTheme: GoogleFonts.montserratTextTheme(
     ThemeData.dark().textTheme,

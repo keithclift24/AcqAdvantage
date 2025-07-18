@@ -3,7 +3,6 @@ import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 
 class AuthProvider extends ChangeNotifier {
   BackendlessUser? _currentUser;

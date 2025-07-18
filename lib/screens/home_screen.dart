@@ -43,12 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
           // Clear the URL parameter by replacing the current history entry
           // This prevents the verification from running again on page refresh
           if (kIsWeb) {
-            // Remove session_id from URL
-            final newUri = Uri.base.replace(
-                queryParameters: {
-              ...uri.queryParameters,
-            }..remove('session_id'));
-
             // Use JavaScript to update the URL without reloading
             // This is a workaround since we can't directly manipulate history in Flutter web
             debugPrint('Payment verification completed successfully');
