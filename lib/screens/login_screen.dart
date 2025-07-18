@@ -14,12 +14,45 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _performLogin() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.loginWithEmail(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (mounted) {
+      if (success) {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Login failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -77,22 +110,34 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Email TextField
                               TextField(
                                 controller: _emailController,
+                                focusNode: _emailFocusNode,
                                 keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
                                 style: const TextStyle(color: Colors.black87),
                                 decoration: const InputDecoration(
                                   labelText: 'Email',
                                 ),
+                                onSubmitted: (_) {
+                                  _passwordFocusNode.requestFocus();
+                                },
                               ),
                               const SizedBox(height: 16.0),
 
                               // Password TextField
                               TextField(
                                 controller: _passwordController,
+                                focusNode: _passwordFocusNode,
                                 obscureText: true,
+                                textInputAction: TextInputAction.done,
                                 style: const TextStyle(color: Colors.black87),
                                 decoration: const InputDecoration(
                                   labelText: 'Password',
                                 ),
+                                onSubmitted: (_) {
+                                  if (!authProvider.isLoading) {
+                                    _performLogin();
+                                  }
+                                },
                               ),
                               const SizedBox(height: 16.0),
 
@@ -100,42 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ElevatedButton(
                                 onPressed: authProvider.isLoading
                                     ? null
-                                    : () async {
-                                        final authProvider =
-                                            Provider.of<AuthProvider>(context,
-                                                listen: false);
-                                        final success =
-                                            await authProvider.loginWithEmail(
-                                          _emailController.text.trim(),
-                                          _passwordController.text,
-                                        );
-
-                                        if (mounted) {
-                                          if (success) {
-                                            if (context.mounted) {
-                                              Navigator.of(context)
-                                                  .pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const HomeScreen(),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(authProvider
-                                                          .errorMessage ??
-                                                      'Login failed'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        }
-                                      },
+                                    : _performLogin,
                                 child: authProvider.isLoading
                                     ? const SizedBox(
                                         height: 20,

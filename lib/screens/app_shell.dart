@@ -65,8 +65,6 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
     );

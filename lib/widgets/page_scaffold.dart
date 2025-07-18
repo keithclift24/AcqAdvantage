@@ -15,7 +15,8 @@ class PageScaffold extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white, // White text for good contrast
       ),
       body: Stack(
         fit: StackFit.expand,
