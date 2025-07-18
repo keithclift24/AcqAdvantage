@@ -5,8 +5,8 @@ final ThemeData appTheme = ThemeData(
   brightness: Brightness.dark,
   scaffoldBackgroundColor: const Color(0xFF1A202C),
   colorScheme: const ColorScheme.dark(
-    primary: Color(0xFF00B5D8), // Cyan blue from your theme
-    secondary: Color(0xFFE53E3E), // Red from your theme
+    primary: Color.fromARGB(255, 238, 67, 67), // Cyan blue from your theme
+    secondary: Color.fromARGB(255, 223, 182, 121), // Red from your theme
     surface: Color(0xFF1A202C), // Background color
   ),
   textTheme: GoogleFonts.montserratTextTheme(
