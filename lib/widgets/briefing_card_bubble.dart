@@ -387,6 +387,149 @@ class _IracAnalysisSection extends StatelessWidget {
   }
 }
 
+class _CommandPalette extends StatelessWidget {
+  final Map<String, dynamic>? recommendations;
+  final Function(String) onActionTapped;
+
+  const _CommandPalette({this.recommendations, required this.onActionTapped});
+
+  static const Map<String, IconData> _commandIcons = {
+    '/more': Icons.search,
+    '/scenario': Icons.theater_comedy_outlined,
+    '/cite': Icons.format_quote_outlined,
+    '/contrast': Icons.compare_arrows_outlined,
+    '/wider': Icons.public_outlined,
+    '/alt': Icons.people_alt_outlined,
+    '/mythbuster': Icons.lightbulb_outline,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final faqItems =
+        recommendations?['anticipated_follow_ups'] as List<dynamic>? ?? [];
+    final suggestedCommands =
+        recommendations?['suggested_commands'] as List<dynamic>? ?? [];
+
+    if (faqItems.isEmpty && suggestedCommands.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'SUGGESTED ACTIONS',
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFA0AEC0),
+              letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 12),
+        // Top Tier: Suggested Questions
+        ...faqItems.map((faq) {
+          final question = faq['question'] as String?;
+          if (question == null) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: _QuestionButton(
+              text: question,
+              onTap: () => onActionTapped(question),
+            ),
+          );
+        }).toList(),
+
+        // Divider
+        if (faqItems.isNotEmpty && suggestedCommands.isNotEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: Divider(color: Color(0xFF4A5568)),
+          ),
+
+        // Bottom Tier: Power Commands
+        if (suggestedCommands.isNotEmpty)
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 8.0,
+            alignment: WrapAlignment.center,
+            children: suggestedCommands.map((cmd) {
+              final command = cmd['command'] as String?;
+              if (command == null) return const SizedBox.shrink();
+              return _CommandButton(
+                command: command,
+                icon: _commandIcons[command],
+                onTap: () => onActionTapped(command),
+              );
+            }).toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class _QuestionButton extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const _QuestionButton({required this.text, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF4A5568),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Text(text,
+              style: const TextStyle(color: Color(0xFFEDF2F7), fontSize: 13)),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandButton extends StatelessWidget {
+  final String command;
+  final IconData? icon;
+  final VoidCallback onTap;
+  const _CommandButton({required this.command, this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final isPrimary = command == '/more';
+    final label = command.replaceFirst('/', ''); // Remove the slash for display
+
+    return Material(
+      color: isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, color: const Color(0xFFCBD5E0), size: 14),
+                const SizedBox(width: 6),
+              ],
+              Text(label,
+                  style: const TextStyle(
+                      color: Color(0xFFEDF2F7),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _CardFooter extends StatelessWidget {
   final Map<String, dynamic>? recommendations;
   final List<dynamic> authorities;
@@ -402,72 +545,41 @@ class _CardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final faqItems =
-        recommendations?['anticipated_follow_ups'] as List<dynamic>? ?? [];
-    final suggestedCommands =
-        recommendations?['suggested_commands'] as List<dynamic>? ?? [];
-
     return Column(
       children: [
-        if (faqItems.isNotEmpty || suggestedCommands.isNotEmpty) ...[
-          _Section(
-            title: 'Suggested Actions',
-            child: Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: [
-                ...suggestedCommands.map((cmd) => _ActionButton(
-                      label: '${cmd['command']} - ${cmd['description']}',
-                      onTap: () => onActionTapped(cmd['command']),
-                      isPrimary: cmd['command'] == '/more',
-                    )),
-                ...faqItems.map((faq) => _ActionButton(
-                      label: faq['question'],
-                      onTap: () => onActionTapped(faq['question']),
-                    )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-        ],
-        Container(
-          padding: const EdgeInsets.only(top: 16),
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: Color(0xFF4A5568))),
-          ),
-          child: Column(
+        _CommandPalette(
+          recommendations: recommendations,
+          onActionTapped: onActionTapped,
+        ),
+        const SizedBox(height: 24),
+        if (authorities.isNotEmpty)
+          _CustomExpansionTile(
+            title: '📜 View Authorities & Sources',
             children: [
-              if (authorities.isNotEmpty)
-                _CustomExpansionTile(
-                  title: '📜 View Authorities & Sources',
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Column(
-                            children: authorities
-                                .map((auth) => _AuthorityItem(
-                                    authority: auth,
-                                    isHighlighted: auth['precedence_level'] ==
-                                        highestPrecedenceLevel))
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 2,
-                          child: _PrecedencePyramid(
-                              highlightLevel: highestPrecedenceLevel),
-                        ),
-                      ],
-                    )
-                  ],
-                ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      children: authorities
+                          .map((auth) => _AuthorityItem(
+                              authority: auth,
+                              isHighlighted: auth['precedence_level'] ==
+                                  highestPrecedenceLevel))
+                          .toList(),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: _PrecedencePyramid(
+                        highlightLevel: highestPrecedenceLevel),
+                  ),
+                ],
+              )
             ],
           ),
-        ),
       ],
     );
   }
