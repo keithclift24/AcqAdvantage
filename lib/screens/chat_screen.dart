@@ -17,6 +17,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _textController.addListener(() {
+      setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       Provider.of<ChatProvider>(context, listen: false)
@@ -123,6 +126,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _textController.removeListener(() {
+      setState(() {});
+    });
     _textController.dispose();
     super.dispose();
   }
