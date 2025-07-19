@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
-import 'dart:math'; // Needed for min function
+import 'dart:math';
 
 // --- Main Widget ---
 class BriefingCardBubble extends StatelessWidget {
   final Map<String, dynamic> data;
+  final Function(String) onActionTapped;
 
-  const BriefingCardBubble({super.key, required this.data});
+  const BriefingCardBubble({
+    super.key,
+    required this.data,
+    required this.onActionTapped,
+  });
 
   // Helper function to safely access nested data
   T? _get<T>(List<String> path) {
@@ -22,30 +27,21 @@ class BriefingCardBubble extends StatelessWidget {
         return null;
       }
     }
-    if (current is T) return current;
+    if (current is T) {
+      return current;
+    }
     return null;
   }
 
   // Formats the card's data for clipboard/sharing
   String _formatForExport() {
-    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
     final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
     final recommendations = _get<Map<String, dynamic>>(
         ['strategic_implications_and_recommendations']);
     final authorities = _get<List<dynamic>>(
             ['source_analysis_and_hierarchy', 'controlling_authorities']) ??
         [];
-
     final buffer = StringBuffer();
-
-    if (queryAnalysis != null) {
-      final assumptions =
-          queryAnalysis['assumptions_made'] as List<dynamic>? ?? [];
-      if (assumptions.isNotEmpty) {
-        buffer.writeln(
-            "ASSUMPTIONS MADE FOR THIS RESPONSE:\n${assumptions.map((e) => "- $e").join('\n')}\n");
-      }
-    }
 
     buffer.writeln("ISSUE:\n${irac?['issue'] ?? 'N/A'}\n");
     buffer.writeln("CONCLUSION (BLUF):\n${irac?['conclusion'] ?? 'N/A'}\n");
@@ -65,15 +61,18 @@ class BriefingCardBubble extends StatelessWidget {
               as List<dynamic>? ??
           [];
 
-      if (takeaways.isNotEmpty)
+      if (takeaways.isNotEmpty) {
         buffer.writeln(
             "Key Takeaways:\n${takeaways.map((e) => "- $e").join('\n')}\n");
-      if (actions.isNotEmpty)
+      }
+      if (actions.isNotEmpty) {
         buffer.writeln(
             "Recommended Actions:\n${actions.map((e) => "- $e").join('\n')}\n");
-      if (risks.isNotEmpty)
+      }
+      if (risks.isNotEmpty) {
         buffer.writeln(
             "Risks & Mitigations:\n${risks.map((e) => "- $e").join('\n')}\n");
+      }
     }
 
     if (authorities.isNotEmpty) {
@@ -136,7 +135,6 @@ class BriefingCardBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
     final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
     final recommendations = _get<Map<String, dynamic>>(
         ['strategic_implications_and_recommendations']);
@@ -144,7 +142,6 @@ class BriefingCardBubble extends StatelessWidget {
             ['source_analysis_and_hierarchy', 'controlling_authorities']) ??
         [];
 
-    // Find the highest precedence level (lowest number) from the cited authorities
     int? highestPrecedenceLevel;
     if (authorities.isNotEmpty) {
       highestPrecedenceLevel = authorities
@@ -202,10 +199,10 @@ class BriefingCardBubble extends StatelessWidget {
           ],
           const SizedBox(height: 20),
           _CardFooter(
-            queryAnalysis: queryAnalysis,
-            faqItems: recommendations?['anticipated_follow_ups'] ?? [],
+            recommendations: recommendations,
             authorities: authorities,
             highestPrecedenceLevel: highestPrecedenceLevel,
+            onActionTapped: onActionTapped,
           ),
         ],
       ),
@@ -275,30 +272,41 @@ class _CardHeader extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
   final String label;
   final VoidCallback onTap;
-  const _ActionButton(
-      {required this.icon, required this.label, required this.onTap});
+  final bool isPrimary;
+
+  const _ActionButton({
+    this.icon,
+    required this.label,
+    required this.onTap,
+    this.isPrimary = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF4A5568),
-          borderRadius: BorderRadius.circular(8),
+          color: isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFFCBD5E0), size: 16),
-            const SizedBox(width: 6),
+            if (icon != null) ...[
+              Icon(icon, color: const Color(0xFFCBD5E0), size: 16),
+              const SizedBox(width: 6),
+            ],
             Text(label,
                 style: const TextStyle(
-                    color: Color(0xFFEDF2F7), fontWeight: FontWeight.w500)),
+                    color: Color(0xFFEDF2F7),
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12)),
           ],
         ),
       ),
@@ -356,7 +364,9 @@ class _IracAnalysisSection extends StatelessWidget {
   }
 
   Widget _buildIracItem(String title, String? text) {
-    if (text == null || text.isEmpty) return const SizedBox.shrink();
+    if (text == null || text.isEmpty) {
+      return const SizedBox.shrink();
+    }
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: Column(
@@ -378,91 +388,87 @@ class _IracAnalysisSection extends StatelessWidget {
 }
 
 class _CardFooter extends StatelessWidget {
-  final Map<String, dynamic>? queryAnalysis;
-  final List<dynamic> faqItems;
+  final Map<String, dynamic>? recommendations;
   final List<dynamic> authorities;
   final int? highestPrecedenceLevel;
+  final Function(String) onActionTapped;
 
-  const _CardFooter(
-      {this.queryAnalysis,
-      required this.faqItems,
-      required this.authorities,
-      this.highestPrecedenceLevel});
+  const _CardFooter({
+    this.recommendations,
+    required this.authorities,
+    this.highestPrecedenceLevel,
+    required this.onActionTapped,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.only(top: 16),
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF4A5568))),
-      ),
-      child: Column(
-        children: [
-          if (faqItems.isNotEmpty)
-            _CustomExpansionTile(
-              title: '❓ View Common Questions (FAQ)',
-              isPrimary: true,
-              children: faqItems
-                  .map((faq) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: SelectableText.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                  text: '${faq['question']}\n',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFFEDF2F7))),
-                              TextSpan(text: faq['answer']),
-                            ],
-                          ),
-                          style: const TextStyle(
-                              color: Color(0xFFCBD5E0),
-                              fontSize: 14,
-                              height: 1.5),
-                        ),
-                      ))
-                  .toList(),
-            ),
-          if (authorities.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _CustomExpansionTile(
-              title: '📜 View Authorities & Sources',
+    final faqItems =
+        recommendations?['anticipated_follow_ups'] as List<dynamic>? ?? [];
+    final suggestedCommands =
+        recommendations?['suggested_commands'] as List<dynamic>? ?? [];
+
+    return Column(
+      children: [
+        if (faqItems.isNotEmpty || suggestedCommands.isNotEmpty) ...[
+          _Section(
+            title: 'Suggested Actions',
+            child: Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        children: authorities
-                            .map((auth) => _AuthorityItem(
-                                authority: auth,
-                                isHighlighted: auth['precedence_level'] ==
-                                    highestPrecedenceLevel))
-                            .toList(),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 2,
-                      child: _PrecedencePyramid(
-                          highlightLevel: highestPrecedenceLevel),
-                    ),
-                  ],
-                )
+                ...suggestedCommands.map((cmd) => _ActionButton(
+                      label: '${cmd['command']} - ${cmd['description']}',
+                      onTap: () => onActionTapped(cmd['command']),
+                      isPrimary: cmd['command'] == '/more',
+                    )),
+                ...faqItems.map((faq) => _ActionButton(
+                      label: faq['question'],
+                      onTap: () => onActionTapped(faq['question']),
+                    )),
               ],
             ),
-          ],
-          if (queryAnalysis != null) ...[
-            const SizedBox(height: 12),
-            _CustomExpansionTile(
-              title: '💡 View Response Context',
-              children: [_QueryAnalysisItem(analysis: queryAnalysis!)],
-            ),
-          ]
+          ),
+          const SizedBox(height: 24),
         ],
-      ),
+        Container(
+          padding: const EdgeInsets.only(top: 16),
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Color(0xFF4A5568))),
+          ),
+          child: Column(
+            children: [
+              if (authorities.isNotEmpty)
+                _CustomExpansionTile(
+                  title: '📜 View Authorities & Sources',
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            children: authorities
+                                .map((auth) => _AuthorityItem(
+                                    authority: auth,
+                                    isHighlighted: auth['precedence_level'] ==
+                                        highestPrecedenceLevel))
+                                .toList(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: _PrecedencePyramid(
+                              highlightLevel: highestPrecedenceLevel),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -487,7 +493,7 @@ class _AuthorityItem extends StatelessWidget {
           InkWell(
             onTap: canLaunch
                 ? () async {
-                    final uri = Uri.parse(url!);
+                    final uri = Uri.parse(url);
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri);
                     }
@@ -535,39 +541,6 @@ class _AuthorityItem extends StatelessWidget {
   }
 }
 
-class _QueryAnalysisItem extends StatelessWidget {
-  final Map<String, dynamic> analysis;
-  const _QueryAnalysisItem({required this.analysis});
-
-  @override
-  Widget build(BuildContext context) {
-    final gaps = analysis['identified_gaps'] as List<dynamic>? ?? [];
-    final assumptions = analysis['assumptions_made'] as List<dynamic>? ?? [];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (gaps.isNotEmpty) ...[
-          const Text("Identified Gaps in Query:",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
-          ...gaps.map((gap) =>
-              Text("- $gap", style: const TextStyle(color: Color(0xFFCBD5E0)))),
-          const SizedBox(height: 10),
-        ],
-        if (assumptions.isNotEmpty) ...[
-          const Text("Assumptions Made for this Response:",
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
-          ...assumptions.map((assumption) => Text("- $assumption",
-              style: const TextStyle(color: Color(0xFFCBD5E0)))),
-        ]
-      ],
-    );
-  }
-}
-
-// --- NEW PYRAMID WIDGET ---
 class _PrecedencePyramid extends StatelessWidget {
   final int? highlightLevel;
 
@@ -616,17 +589,17 @@ class _PrecedencePyramid extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 1),
                   decoration: BoxDecoration(
                     color: isHighlighted
-                        ? const Color(0xFF2C5282).withOpacity(0.7)
-                        : const Color(0xFF4A5568).withOpacity(0.2),
+                        ? const Color(0xB32C5282)
+                        : const Color(0x334A5568),
                     border: Border.all(
                         color: isHighlighted
                             ? const Color(0xFF63B3ED)
-                            : const Color(0xFF4A5568).withOpacity(0.3)),
+                            : const Color(0x4D4A5568)),
                     borderRadius: BorderRadius.circular(3),
                     boxShadow: isHighlighted
                         ? [
                             BoxShadow(
-                              color: const Color(0xFF63B3ED).withOpacity(0.5),
+                              color: const Color(0x8063B3ED),
                               blurRadius: 10,
                               spreadRadius: 2,
                             )
@@ -660,12 +633,10 @@ class _PrecedencePyramid extends StatelessWidget {
 class _CustomExpansionTile extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  final bool isPrimary;
 
   const _CustomExpansionTile({
     required this.title,
     required this.children,
-    this.isPrimary = false,
   });
 
   @override
@@ -679,28 +650,20 @@ class _CustomExpansionTile extends StatelessWidget {
         title: Text(
           title,
           textAlign: TextAlign.center,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 14,
-            color:
-                isPrimary ? const Color(0xFF63B3ED) : const Color(0xFFE2E8F0),
+            color: Color(0xFFE2E8F0),
           ),
         ),
         backgroundColor: const Color(0xFF1A202C),
-        collapsedBackgroundColor:
-            isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
+        collapsedBackgroundColor: const Color(0xFF4A5568),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: BorderSide(
-                color: isPrimary
-                    ? const Color(0xFF2C5282)
-                    : const Color(0xFF4A5568))),
+            side: const BorderSide(color: Color(0xFF4A5568))),
         collapsedShape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: BorderSide(
-                color: isPrimary
-                    ? const Color(0xFF2C5282)
-                    : const Color(0xFF4A5568))),
+            side: const BorderSide(color: Color(0xFF4A5568))),
         children: [
           Padding(
             padding: const EdgeInsets.all(12.0),

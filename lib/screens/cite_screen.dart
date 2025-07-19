@@ -14,12 +14,15 @@ class CiteScreen extends StatefulWidget {
 class _CiteScreenState extends State<CiteScreen> {
   final TextEditingController _textController = TextEditingController();
 
+  // Listener for the text controller to update state
+  void _onTextChanged() {
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
-    _textController.addListener(() {
-      setState(() {});
-    });
+    _textController.addListener(_onTextChanged); // Correctly add listener
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       Provider.of<ChatProvider>(context, listen: false)
@@ -41,8 +44,13 @@ class _CiteScreenState extends State<CiteScreen> {
                   padding: const EdgeInsets.all(8.0),
                   itemCount: chatProvider.messages.length,
                   itemBuilder: (context, index) {
+                    final message = chatProvider.messages[index];
+                    // --- FIX: Pass the onActionTapped parameter ---
                     return ChatMessageBubble(
-                      message: chatProvider.messages[index],
+                      message: message,
+                      onActionTapped: (text) {
+                        _sendMessage(context, text);
+                      },
                     );
                   },
                 ),
@@ -101,12 +109,15 @@ class _CiteScreenState extends State<CiteScreen> {
       color: const Color(0xFF2D3748),
       child: SafeArea(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: TextField(
                 controller: _textController,
                 enabled: !isLoading,
                 style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.multiline,
+                maxLines: null,
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   hintStyle: const TextStyle(color: Colors.white54),
@@ -118,7 +129,7 @@ class _CiteScreenState extends State<CiteScreen> {
                   ),
                 ),
                 onSubmitted: (text) {
-                  if (text.isNotEmpty) {
+                  if (text.isNotEmpty && !isLoading) {
                     _sendMessage(context, text);
                   }
                 },
@@ -127,7 +138,7 @@ class _CiteScreenState extends State<CiteScreen> {
             const SizedBox(width: 8.0),
             IconButton(
               icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: isLoading || _textController.text.isEmpty
+              onPressed: isLoading || _textController.text.trim().isEmpty
                   ? null
                   : () => _sendMessage(context, _textController.text),
             ),
@@ -138,6 +149,7 @@ class _CiteScreenState extends State<CiteScreen> {
   }
 
   void _sendMessage(BuildContext context, String text) {
+    if (text.trim().isEmpty) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     context
         .read<ChatProvider>()
@@ -147,9 +159,7 @@ class _CiteScreenState extends State<CiteScreen> {
 
   @override
   void dispose() {
-    _textController.removeListener(() {
-      setState(() {});
-    });
+    _textController.removeListener(_onTextChanged); // Correctly remove listener
     _textController.dispose();
     super.dispose();
   }

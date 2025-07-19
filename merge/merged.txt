@@ -12,13 +12,13 @@ import 'theme.dart';
 
 void main() {
   try {
-    // Only initialize Stripe for mobile platforms
-    if (!kIsWeb) {
-      Stripe.publishableKey =
-          'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
-      debugPrint('Stripe initialized for mobile');
+    // Initialize Stripe for all platforms
+    Stripe.publishableKey =
+        'pk_test_51RjsS42Lfw5u3Q4QD4i0cJYE93KJRQTDae0Rhp7AhhMDqNttjRrHZts3zdPwf3lfbDGa8JtG0fhKvT6bDpw0T4DS00y1cCj1PV'; // Stripe publishable key
+    if (kIsWeb) {
+      debugPrint('Stripe initialized for web');
     } else {
-      debugPrint('Skipping Stripe initialization for web');
+      debugPrint('Stripe initialized for mobile');
     }
   } catch (e) {
     debugPrint('Error initializing Stripe: $e');
@@ -34,7 +34,10 @@ class AcqAdvantageApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
+          create: (_) => ChatProvider(),
+          update: (_, auth, chat) => chat!..update(auth),
+        ),
       ],
       child: MaterialApp(
         title: 'AcqAdvantage',
@@ -54,11 +57,23 @@ class AcqAdvantageApp extends StatelessWidget {
 
 
 // File: c:\keithclift24\AcqAdvantage\lib\models\chat_message.dart
+// An enum to identify the type of content in the message
+enum MessageType { text, briefingCard }
+
 class ChatMessage {
   String text;
   final bool isFromUser;
+  // The type of this message, defaults to text
+  final MessageType messageType;
+  // A map to hold our structured JSON data
+  final Map<String, dynamic>? structuredData;
 
-  ChatMessage({required this.text, required this.isFromUser});
+  ChatMessage({
+    required this.text,
+    required this.isFromUser,
+    this.messageType = MessageType.text, // Default to plain text
+    this.structuredData,
+  });
 }
 
 
@@ -279,31 +294,122 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> checkSubscriptionStatus() async {
-    if (_currentUser == null) return;
-
+  Future<void> redirectToCheckout(String planType) async {
+    _isLoading = true;
+    notifyListeners();
     try {
       await _ensureInitialized();
-      final queryBuilder = DataQueryBuilder()
-        ..whereClause = "ownerId.objectId = '${_currentUser!.getObjectId()}'";
-      final subscriptions = await Backendless.data
-          .of('Subscriptions')
-          .find(queryBuilder: queryBuilder);
+      debugPrint('Creating checkout session for plan type: $planType');
 
-      if (subscriptions != null && subscriptions.isNotEmpty) {
-        final status = subscriptions.first!['status'];
-        if (status == 'active' || status == 'trialing') {
-          isSubscribed = true;
+      // Get user token from Backendless
+      final userToken = await Backendless.userService.getUserToken();
+      debugPrint('User token retrieved: ${userToken != null ? 'Yes' : 'No'}');
+
+      if (userToken == null || _currentUser == null) {
+        debugPrint(
+            'User not authenticated - userToken: $userToken, currentUser: $_currentUser');
+        throw Exception('User not authenticated');
+      }
+
+      final objectId = _currentUser!.getProperty('objectId');
+      final customerEmail = _currentUser!.email;
+      debugPrint('User objectId: $objectId');
+      debugPrint('Customer email: $customerEmail');
+
+      // Make POST request to create checkout session with new redirect URLs
+      debugPrint('Making POST request to API...');
+      final response = await http.post(
+        Uri.parse(
+            'https://acqadvantage-api.onrender.com/create-checkout-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'user-token': userToken,
+          'objectId': objectId,
+          'planType': planType,
+          'successUrl':
+              'https://acqadvantage.com/?session_id={CHECKOUT_SESSION_ID}',
+          'cancelUrl': 'https://acqadvantage.com',
+          'customerEmail': customerEmail,
+        }),
+      );
+
+      debugPrint('API response status: ${response.statusCode}');
+      debugPrint('API response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final checkoutUrl = responseData['checkout_url'];
+        final uri = Uri.parse(checkoutUrl);
+        debugPrint('Launching Stripe checkout URL: $checkoutUrl');
+
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          debugPrint('Stripe checkout URL launched successfully');
         } else {
-          isSubscribed = false;
+          debugPrint('Could not launch checkout URL: $checkoutUrl');
+          throw Exception('Could not launch checkout URL');
         }
       } else {
-        isSubscribed = false;
+        debugPrint(
+            'Failed to create checkout session - Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('Failed to create checkout session: ${response.body}');
+      }
+
+      _errorMessage = null;
+    } catch (e) {
+      debugPrint('Redirect to checkout error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyPaymentSession(String sessionId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      await _ensureInitialized();
+      debugPrint('Verifying payment session: $sessionId');
+
+      // Make POST request to verify payment session
+      final response = await http.post(
+        Uri.parse(
+            'https://acqadvantage-api.onrender.com/verify-payment-session'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'sessionId': sessionId,
+        }),
+      );
+
+      debugPrint('Verify payment response status: ${response.statusCode}');
+      debugPrint('Verify payment response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        debugPrint('Payment session verified successfully: $responseData');
+        _errorMessage = null;
+      } else {
+        debugPrint(
+            'Failed to verify payment session - Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception('Failed to verify payment session: ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error checking subscription status: $e');
-      isSubscribed = false;
+      debugPrint('Verify payment session error: $e');
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
+  }
+
+  Future<void> checkSubscriptionStatus() async {
+    // Temporarily disabled for testing - all users are considered subscribed
+    isSubscribed = true;
     notifyListeners();
   }
 }
@@ -328,6 +434,11 @@ class ChatProvider extends ChangeNotifier {
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
   ScrollController get scrollController => _scrollController;
+
+  void update(AuthProvider auth) {
+    // This method is called when AuthProvider changes.
+    // You can add logic here to react to auth changes if needed.
+  }
 
   Future<void> initializeChat(BackendlessUser? user) async {
     if (user == null) return;
@@ -388,28 +499,18 @@ class ChatProvider extends ChangeNotifier {
       String text, BackendlessUser? user, AuthProvider authProvider) async {
     if (user == null || _threadId == null) return;
 
-    // if (!authProvider.isSubscribed) {
-    //   _messages.add(ChatMessage(
-    //       text: 'Please subscribe to use this feature.', isFromUser: false));
-    //   notifyListeners();
-    //   _scrollToBottom();
-    //   return;
-    // }
-
-    // Add user's message to the list
     _messages.add(ChatMessage(text: text, isFromUser: true));
     _isLoading = true;
     notifyListeners();
     _scrollToBottom();
 
-    // Add a placeholder for the assistant's response
+    // Add a placeholder for the assistant's response. We will update this object later.
     _messages.add(ChatMessage(text: '', isFromUser: false));
     notifyListeners();
     _scrollToBottom();
 
     final url = Uri.parse('https://acqadvantage-api.onrender.com/ask');
     final userToken = await Backendless.userService.getUserToken();
-
     final request = http.Request('POST', url)
       ..headers.addAll({
         'Content-Type': 'application/json',
@@ -424,12 +525,39 @@ class ChatProvider extends ChangeNotifier {
     try {
       final streamedResponse = await request.send();
 
+      // Use a StringBuffer to efficiently collect the chunks of the response
+      final buffer = StringBuffer();
+
       streamedResponse.stream.transform(utf8.decoder).listen((chunk) {
-        _messages.last.text += chunk;
-        notifyListeners();
-        _scrollToBottom();
+        buffer.write(chunk);
       }, onDone: () {
         _isLoading = false;
+        try {
+          // 1. Get the complete string from the buffer.
+          final fullResponse = buffer.toString();
+
+          // 2. IMPORTANT: Parse the string into a JSON Map.
+          final Map<String, dynamic> jsonData = json.decode(fullResponse);
+
+          // 3. Find the placeholder message we added earlier.
+          final lastMessageIndex = _messages.length - 1;
+
+          // 4. Replace the placeholder with a NEW ChatMessage that has the correct type and data.
+          _messages[lastMessageIndex] = ChatMessage(
+            text: 'Briefing Card received', // This text won't be displayed.
+            isFromUser: false,
+            messageType:
+                MessageType.briefingCard, // <-- This tells the UI what to do.
+            structuredData: jsonData, // <-- This passes the data to the widget.
+          );
+        } catch (e) {
+          // This is a fallback if the response ISN'T valid JSON.
+          _messages.last.text = buffer.toString().isNotEmpty
+              ? buffer.toString()
+              : 'Error: Failed to get a valid response.';
+          debugPrint('JSON parsing failed: $e');
+        }
+        // 5. Update the UI.
         notifyListeners();
       }, onError: (error) {
         _isLoading = false;
@@ -474,6 +602,7 @@ class ApplyScreen extends StatelessWidget {
 
 // File: c:\keithclift24\AcqAdvantage\lib\screens\app_shell.dart
 import 'package:flutter/material.dart';
+import '../widgets/page_scaffold.dart';
 import 'chat_screen.dart';
 import 'apply_screen.dart';
 import 'learn_screen.dart';
@@ -500,6 +629,15 @@ class _AppShellState extends State<AppShell> {
     const ToolsScreen(),
   ];
 
+  static const List<String> _widgetTitles = <String>[
+    'Research',
+    'Apply',
+    'Learn',
+    'Cite',
+    'Simplify',
+    'Tools',
+  ];
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -509,8 +647,11 @@ class _AppShellState extends State<AppShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+      body: PageScaffold(
+        title: _widgetTitles[_selectedIndex],
+        body: Center(
+          child: _widgetOptions.elementAt(_selectedIndex),
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -540,8 +681,6 @@ class _AppShellState extends State<AppShell> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
         onTap: _onItemTapped,
       ),
     );
@@ -569,6 +708,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _textController.addListener(() {
+      setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       Provider.of<ChatProvider>(context, listen: false)
@@ -582,21 +724,6 @@ class _ChatScreenState extends State<ChatScreen> {
       builder: (context, chatProvider, child) {
         return Scaffold(
           backgroundColor: const Color(0xFF1A202C),
-          appBar: AppBar(
-            title: const Text('AcqAdvantage'),
-            backgroundColor: const Color(0xFF2D3748),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.add_comment_outlined),
-                onPressed: () {
-                  final authProvider =
-                      Provider.of<AuthProvider>(context, listen: false);
-                  Provider.of<ChatProvider>(context, listen: false)
-                      .resetChat(authProvider.currentUser);
-                },
-              ),
-            ],
-          ),
           body: Column(
             children: [
               Expanded(
@@ -628,6 +755,27 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning, color: Colors.grey, size: 16.0),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        'For your security, do not submit sensitive information. This includes, but is not limited to: Personally Identifiable Information (PII), corporate proprietary data, trade secrets, or any government-classified or Controlled Unclassified Information (CUI).',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               _buildInputArea(context, chatProvider),
             ],
           ),
@@ -690,6 +838,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _textController.removeListener(() {
+      setState(() {});
+    });
     _textController.dispose();
     super.dispose();
   }
@@ -698,17 +849,159 @@ class _ChatScreenState extends State<ChatScreen> {
 
 // File: c:\keithclift24\AcqAdvantage\lib\screens\cite_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../providers/chat_provider.dart';
+import '../widgets/chat_message_bubble.dart';
 
-class CiteScreen extends StatelessWidget {
+class CiteScreen extends StatefulWidget {
   const CiteScreen({super.key});
 
   @override
+  State<CiteScreen> createState() => _CiteScreenState();
+}
+
+class _CiteScreenState extends State<CiteScreen> {
+  final TextEditingController _textController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(() {
+      setState(() {});
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      Provider.of<ChatProvider>(context, listen: false)
+          .initializeChat(authProvider.currentUser);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Cite Screen'),
+    return Consumer<ChatProvider>(
+      builder: (context, chatProvider, child) {
+        return Scaffold(
+          backgroundColor: const Color(0xFF1A202C),
+          body: Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: chatProvider.scrollController,
+                  padding: const EdgeInsets.all(8.0),
+                  itemCount: chatProvider.messages.length,
+                  itemBuilder: (context, index) {
+                    return ChatMessageBubble(
+                      message: chatProvider.messages[index],
+                    );
+                  },
+                ),
+              ),
+              if (chatProvider.isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text('AcqAdvantage is typing...',
+                          style: TextStyle(color: Colors.white54)),
+                    ],
+                  ),
+                ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning, color: Colors.grey, size: 16.0),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        'For your security, do not submit sensitive information. This includes, but is not limited to: Personally Identifiable Information (PII), corporate proprietary data, trade secrets, or any government-classified or Controlled Unclassified Information (CUI).',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _buildInputArea(context, chatProvider),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInputArea(BuildContext context, ChatProvider chatProvider) {
+    final bool isLoading = chatProvider.isLoading;
+
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: const Color(0xFF2D3748),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _textController,
+                enabled: !isLoading,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  hintStyle: const TextStyle(color: Colors.white54),
+                  filled: true,
+                  fillColor: const Color(0xFF1A202C),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20.0),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onSubmitted: (text) {
+                  if (text.isNotEmpty) {
+                    _sendMessage(context, text);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8.0),
+            IconButton(
+              icon: const Icon(Icons.send, color: Colors.white),
+              onPressed: isLoading || _textController.text.isEmpty
+                  ? null
+                  : () => _sendMessage(context, _textController.text),
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  void _sendMessage(BuildContext context, String text) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    context
+        .read<ChatProvider>()
+        .sendMessage(text, authProvider.currentUser, authProvider);
+    _textController.clear();
+  }
+
+  @override
+  void dispose() {
+    _textController.removeListener(() {
+      setState(() {});
+    });
+    _textController.dispose();
+    super.dispose();
   }
 }
 
@@ -733,8 +1026,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AuthProvider>(context, listen: false)
-          .checkSubscriptionStatus();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      authProvider.checkSubscriptionStatus();
     });
   }
 
@@ -750,9 +1043,9 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Text(
                   'Welcome!',
-                  style: TextStyle(fontSize: 24.0, color: Colors.white),
+                  style: TextStyle(fontSize: 48.0, color: Colors.white),
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: 60),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -765,7 +1058,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 30, vertical: 15),
-                    backgroundColor: Colors.blue,
+                    backgroundColor: const Color.fromARGB(255, 56, 56, 62),
                     foregroundColor: Colors.white,
                   ),
                   child: const Text(
@@ -840,12 +1133,45 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final FocusNode _emailFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _emailFocusNode.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _performLogin() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.loginWithEmail(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (mounted) {
+      if (success) {
+        if (context.mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const HomeScreen(),
+            ),
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Login failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -903,22 +1229,34 @@ class _LoginScreenState extends State<LoginScreen> {
                               // Email TextField
                               TextField(
                                 controller: _emailController,
+                                focusNode: _emailFocusNode,
                                 keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
                                 style: const TextStyle(color: Colors.black87),
                                 decoration: const InputDecoration(
                                   labelText: 'Email',
                                 ),
+                                onSubmitted: (_) {
+                                  _passwordFocusNode.requestFocus();
+                                },
                               ),
                               const SizedBox(height: 16.0),
 
                               // Password TextField
                               TextField(
                                 controller: _passwordController,
+                                focusNode: _passwordFocusNode,
                                 obscureText: true,
+                                textInputAction: TextInputAction.done,
                                 style: const TextStyle(color: Colors.black87),
                                 decoration: const InputDecoration(
                                   labelText: 'Password',
                                 ),
+                                onSubmitted: (_) {
+                                  if (!authProvider.isLoading) {
+                                    _performLogin();
+                                  }
+                                },
                               ),
                               const SizedBox(height: 16.0),
 
@@ -926,42 +1264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ElevatedButton(
                                 onPressed: authProvider.isLoading
                                     ? null
-                                    : () async {
-                                        final authProvider =
-                                            Provider.of<AuthProvider>(context,
-                                                listen: false);
-                                        final success =
-                                            await authProvider.loginWithEmail(
-                                          _emailController.text.trim(),
-                                          _passwordController.text,
-                                        );
-
-                                        if (mounted) {
-                                          if (success) {
-                                            if (context.mounted) {
-                                              Navigator.of(context)
-                                                  .pushReplacement(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      const HomeScreen(),
-                                                ),
-                                              );
-                                            }
-                                          } else {
-                                            if (context.mounted) {
-                                              ScaffoldMessenger.of(context)
-                                                  .showSnackBar(
-                                                SnackBar(
-                                                  content: Text(authProvider
-                                                          .errorMessage ??
-                                                      'Login failed'),
-                                                  backgroundColor: Colors.red,
-                                                ),
-                                              );
-                                            }
-                                          }
-                                        }
-                                      },
+                                    : _performLogin,
                                 child: authProvider.isLoading
                                     ? const SizedBox(
                                         height: 20,
@@ -1147,8 +1450,7 @@ class SubscriptionScreen extends StatelessWidget {
                             onPressed: authProvider.isLoading
                                 ? null
                                 : () {
-                                    authProvider
-                                        .createCheckoutSession('monthly');
+                                    authProvider.redirectToCheckout('monthly');
                                   },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -1239,8 +1541,7 @@ class SubscriptionScreen extends StatelessWidget {
                             onPressed: authProvider.isLoading
                                 ? null
                                 : () {
-                                    authProvider
-                                        .createCheckoutSession('annual');
+                                    authProvider.redirectToCheckout('annual');
                                   },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 15),
@@ -1310,6 +1611,11 @@ import 'package:google_fonts/google_fonts.dart';
 final ThemeData appTheme = ThemeData(
   brightness: Brightness.dark,
   scaffoldBackgroundColor: const Color(0xFF1A202C),
+  colorScheme: const ColorScheme.dark(
+    primary: Color.fromARGB(255, 238, 67, 67), // Cyan blue from your theme
+    secondary: Color.fromARGB(255, 223, 182, 121), // Red from your theme
+    surface: Color(0xFF1A202C), // Background color
+  ),
   textTheme: GoogleFonts.montserratTextTheme(
     ThemeData.dark().textTheme,
   ),
@@ -1333,12 +1639,738 @@ final ThemeData appTheme = ThemeData(
       ),
     ),
   ),
+  bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+    backgroundColor: Color(0xFF1A202C), // Match your background
+    selectedItemColor: Color(0xFF00B5D8), // Cyan blue for selected
+    unselectedItemColor: Colors.white70, // Light but readable for unselected
+    type: BottomNavigationBarType.fixed,
+  ),
 );
+
+
+// File: c:\keithclift24\AcqAdvantage\lib\widgets\briefing_card_bubble.dart
+// lib/widgets/briefing_card_bubble.dart
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:math'; // Needed for min function
+
+// --- Main Widget ---
+class BriefingCardBubble extends StatelessWidget {
+  final Map<String, dynamic> data;
+
+  const BriefingCardBubble({super.key, required this.data});
+
+  // Helper function to safely access nested data
+  T? _get<T>(List<String> path) {
+    dynamic current = data;
+    for (var key in path) {
+      if (current is Map<String, dynamic> && current.containsKey(key)) {
+        current = current[key];
+      } else {
+        return null;
+      }
+    }
+    if (current is T) return current;
+    return null;
+  }
+
+  // Formats the card's data for clipboard/sharing
+  String _formatForExport() {
+    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
+    final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
+    final recommendations = _get<Map<String, dynamic>>(
+        ['strategic_implications_and_recommendations']);
+    final authorities = _get<List<dynamic>>(
+            ['source_analysis_and_hierarchy', 'controlling_authorities']) ??
+        [];
+
+    final buffer = StringBuffer();
+
+    if (queryAnalysis != null) {
+      final assumptions =
+          queryAnalysis['assumptions_made'] as List<dynamic>? ?? [];
+      if (assumptions.isNotEmpty) {
+        buffer.writeln(
+            "ASSUMPTIONS MADE FOR THIS RESPONSE:\n${assumptions.map((e) => "- $e").join('\n')}\n");
+      }
+    }
+
+    buffer.writeln("ISSUE:\n${irac?['issue'] ?? 'N/A'}\n");
+    buffer.writeln("CONCLUSION (BLUF):\n${irac?['conclusion'] ?? 'N/A'}\n");
+    buffer.writeln("--- DETAILED ANALYSIS ---\n");
+    buffer.writeln("RULE:\n${irac?['rule'] ?? 'N/A'}\n");
+    buffer.writeln("APPLICATION:\n${irac?['application'] ?? 'N/A'}\n");
+
+    if (recommendations != null) {
+      buffer.writeln("--- GUIDANCE & RECOMMENDATIONS ---\n");
+      final takeaways =
+          recommendations['key_takeaways_for_leadership'] as List<dynamic>? ??
+              [];
+      final actions =
+          recommendations['recommended_courses_of_action'] as List<dynamic>? ??
+              [];
+      final risks = recommendations['identified_risks_and_mitigations']
+              as List<dynamic>? ??
+          [];
+
+      if (takeaways.isNotEmpty)
+        buffer.writeln(
+            "Key Takeaways:\n${takeaways.map((e) => "- $e").join('\n')}\n");
+      if (actions.isNotEmpty)
+        buffer.writeln(
+            "Recommended Actions:\n${actions.map((e) => "- $e").join('\n')}\n");
+      if (risks.isNotEmpty)
+        buffer.writeln(
+            "Risks & Mitigations:\n${risks.map((e) => "- $e").join('\n')}\n");
+    }
+
+    if (authorities.isNotEmpty) {
+      buffer.writeln("--- CONTROLLING AUTHORITIES ---\n");
+      buffer.writeln(authorities
+          .map((auth) =>
+              "- (${auth['precedence_level']}) ${auth['precedence_name']}: ${auth['source_name']} ${auth['reference']}")
+          .join('\n'));
+      buffer.writeln();
+    }
+
+    final faqItems =
+        recommendations?['anticipated_follow_ups'] as List<dynamic>? ?? [];
+    if (faqItems.isNotEmpty) {
+      buffer.writeln("--- FREQUENTLY ASKED QUESTIONS ---\n");
+      buffer.writeln(faqItems
+          .map((faq) => "Q: ${faq['question']}\nA: ${faq['answer']}")
+          .join('\n\n'));
+    }
+
+    return buffer.toString();
+  }
+
+  List<Widget> _buildGuidanceItems(Map<String, dynamic> recommendations) {
+    final takeaways =
+        recommendations['key_takeaways_for_leadership'] as List<dynamic>? ?? [];
+    final actions =
+        recommendations['recommended_courses_of_action'] as List<dynamic>? ??
+            [];
+    final risks =
+        recommendations['identified_risks_and_mitigations'] as List<dynamic>? ??
+            [];
+
+    List<Widget> items = [];
+    items.addAll(
+        takeaways.map((item) => _buildGuidanceItem('🧠', item.toString())));
+    items.addAll(
+        actions.map((item) => _buildGuidanceItem('✅', item.toString())));
+    items
+        .addAll(risks.map((item) => _buildGuidanceItem('⚠️', item.toString())));
+    return items;
+  }
+
+  Widget _buildGuidanceItem(String icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+              child: SelectableText(text,
+                  style:
+                      const TextStyle(fontSize: 14, color: Color(0xFFE2E8F0)))),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
+    final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
+    final recommendations = _get<Map<String, dynamic>>(
+        ['strategic_implications_and_recommendations']);
+    final authorities = _get<List<dynamic>>(
+            ['source_analysis_and_hierarchy', 'controlling_authorities']) ??
+        [];
+
+    // Find the highest precedence level (lowest number) from the cited authorities
+    int? highestPrecedenceLevel;
+    if (authorities.isNotEmpty) {
+      highestPrecedenceLevel = authorities
+          .map((auth) => auth['precedence_level'] as int)
+          .reduce(min);
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D3748),
+        border: Border.all(color: const Color(0xFF4A5568)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardHeader(
+            title: irac?['issue'] ?? 'Acquisition Analysis',
+            onCopy: () {
+              Clipboard.setData(ClipboardData(text: _formatForExport()));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Copied to clipboard!')),
+              );
+            },
+            onShare: () {
+              Share.share(_formatForExport(),
+                  subject: irac?['issue'] ?? 'Acquisition Analysis');
+            },
+          ),
+          if (irac?['conclusion'] != null) ...[
+            const SizedBox(height: 20),
+            _Section(
+              title: 'Determination (BLUF)',
+              child: SelectableText(
+                irac!['conclusion'],
+                style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFFF7FAFC),
+                    fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+          if (irac != null) ...[
+            const SizedBox(height: 24),
+            _IracAnalysisSection(irac: irac),
+          ],
+          if (recommendations != null) ...[
+            const SizedBox(height: 24),
+            _CustomExpansionTile(
+              title: '🔑 View Key Principles & Actions',
+              children: _buildGuidanceItems(recommendations),
+            ),
+          ],
+          const SizedBox(height: 20),
+          _CardFooter(
+            queryAnalysis: queryAnalysis,
+            faqItems: recommendations?['anticipated_follow_ups'] ?? [],
+            authorities: authorities,
+            highestPrecedenceLevel: highestPrecedenceLevel,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// --- Sub-Widgets ---
+
+class _CardHeader extends StatelessWidget {
+  final String title;
+  final VoidCallback onCopy;
+  final VoidCallback onShare;
+  const _CardHeader(
+      {required this.title, required this.onCopy, required this.onShare});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(bottom: 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFF4A5568))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('⚖️', style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SelectableText(
+                  title,
+                  style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFF7FAFC)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _ActionButton(
+                  icon: Icons.copy_all_outlined, label: 'Copy', onTap: onCopy),
+              const SizedBox(width: 8),
+              _ActionButton(
+                  icon: Icons.share_outlined, label: 'Share', onTap: onShare),
+              const SizedBox(width: 8),
+              _ActionButton(
+                  icon: Icons.download_outlined,
+                  label: 'Export',
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Export functionality coming soon!')),
+                    );
+                  }),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _ActionButton(
+      {required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF4A5568),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFFCBD5E0), size: 16),
+            const SizedBox(width: 6),
+            Text(label,
+                style: const TextStyle(
+                    color: Color(0xFFEDF2F7), fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _Section({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFA0AEC0),
+              letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 8),
+        child,
+      ],
+    );
+  }
+}
+
+class _IracAnalysisSection extends StatelessWidget {
+  final Map<String, dynamic> irac;
+  const _IracAnalysisSection({required this.irac});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'DETAILED ANALYSIS',
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFFA0AEC0),
+              letterSpacing: 0.5),
+        ),
+        const SizedBox(height: 12),
+        _buildIracItem('Rule', irac['rule']),
+        _buildIracItem('Application', irac['application']),
+      ],
+    );
+  }
+
+  Widget _buildIracItem(String title, String? text) {
+    if (text == null || text.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SelectableText(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFEDF2F7))),
+          const SizedBox(height: 4),
+          SelectableText(text,
+              style: const TextStyle(
+                  fontSize: 14, color: Color(0xFFE2E8F0), height: 1.5)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CardFooter extends StatelessWidget {
+  final Map<String, dynamic>? queryAnalysis;
+  final List<dynamic> faqItems;
+  final List<dynamic> authorities;
+  final int? highestPrecedenceLevel;
+
+  const _CardFooter(
+      {this.queryAnalysis,
+      required this.faqItems,
+      required this.authorities,
+      this.highestPrecedenceLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(top: 16),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Color(0xFF4A5568))),
+      ),
+      child: Column(
+        children: [
+          if (faqItems.isNotEmpty)
+            _CustomExpansionTile(
+              title: '❓ View Common Questions (FAQ)',
+              isPrimary: true,
+              children: faqItems
+                  .map((faq) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: SelectableText.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                  text: '${faq['question']}\n',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFEDF2F7))),
+                              TextSpan(text: faq['answer']),
+                            ],
+                          ),
+                          style: const TextStyle(
+                              color: Color(0xFFCBD5E0),
+                              fontSize: 14,
+                              height: 1.5),
+                        ),
+                      ))
+                  .toList(),
+            ),
+          if (authorities.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _CustomExpansionTile(
+              title: '📜 View Authorities & Sources',
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        children: authorities
+                            .map((auth) => _AuthorityItem(
+                                authority: auth,
+                                isHighlighted: auth['precedence_level'] ==
+                                    highestPrecedenceLevel))
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _PrecedencePyramid(
+                          highlightLevel: highestPrecedenceLevel),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ],
+          if (queryAnalysis != null) ...[
+            const SizedBox(height: 12),
+            _CustomExpansionTile(
+              title: '💡 View Response Context',
+              children: [_QueryAnalysisItem(analysis: queryAnalysis!)],
+            ),
+          ]
+        ],
+      ),
+    );
+  }
+}
+
+class _AuthorityItem extends StatelessWidget {
+  final Map<String, dynamic> authority;
+  final bool isHighlighted;
+  const _AuthorityItem({required this.authority, this.isHighlighted = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final url = authority['url'] as String?;
+    final canLaunch = url != null && url.isNotEmpty;
+    final isSupplemental = authority['is_supplemental'] as bool? ?? false;
+    final precedenceName = authority['precedence_name'] as String?;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: canLaunch
+                ? () async {
+                    final uri = Uri.parse(url!);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  }
+                : null,
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text:
+                        '(${authority['precedence_level']}) ${precedenceName ?? ""}: ',
+                    style: TextStyle(
+                        color: isHighlighted
+                            ? const Color(0xFF63B3ED)
+                            : const Color(0xFFA0AEC0))),
+                TextSpan(
+                    text:
+                        '${authority['source_name']} ${authority['reference']}',
+                    style: TextStyle(
+                      color: canLaunch
+                          ? const Color(0xFF63B3ED)
+                          : const Color(0xFFCBD5E0),
+                      decoration: canLaunch
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                    )),
+                if (isSupplemental)
+                  const TextSpan(
+                      text: ' [Supplemental]',
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFFA0AEC0)))
+              ]),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 4),
+          SelectableText(
+            '"${authority['relevant_text']}"',
+            style: const TextStyle(
+                color: Color(0xFFA0AEC0), fontStyle: FontStyle.italic),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _QueryAnalysisItem extends StatelessWidget {
+  final Map<String, dynamic> analysis;
+  const _QueryAnalysisItem({required this.analysis});
+
+  @override
+  Widget build(BuildContext context) {
+    final gaps = analysis['identified_gaps'] as List<dynamic>? ?? [];
+    final assumptions = analysis['assumptions_made'] as List<dynamic>? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (gaps.isNotEmpty) ...[
+          const Text("Identified Gaps in Query:",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
+          ...gaps.map((gap) =>
+              Text("- $gap", style: const TextStyle(color: Color(0xFFCBD5E0)))),
+          const SizedBox(height: 10),
+        ],
+        if (assumptions.isNotEmpty) ...[
+          const Text("Assumptions Made for this Response:",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
+          ...assumptions.map((assumption) => Text("- $assumption",
+              style: const TextStyle(color: Color(0xFFCBD5E0)))),
+        ]
+      ],
+    );
+  }
+}
+
+// --- NEW PYRAMID WIDGET ---
+class _PrecedencePyramid extends StatelessWidget {
+  final int? highlightLevel;
+
+  final List<Map<String, dynamic>> precedenceLevels = const [
+    {'level': 1, 'name': 'Constitution'},
+    {'level': 2, 'name': 'Statutes'},
+    {'level': 3, 'name': 'Exec Orders'},
+    {'level': 4, 'name': 'Gov Policy'},
+    {'level': 5, 'name': 'FAR'},
+    {'level': 6, 'name': 'Supplements'},
+    {'level': 7, 'name': 'Procedures'},
+    {'level': 8, 'name': 'DoD FMR'},
+    {'level': 9, 'name': 'Memos'},
+    {'level': 10, 'name': 'Case Law'},
+    {'level': 11, 'name': 'T&Cs'},
+    {'level': 12, 'name': 'Local'},
+    {'level': 13, 'name': 'Forums'}
+  ];
+
+  const _PrecedencePyramid({this.highlightLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1 / 1.1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            alignment: Alignment.center,
+            children: precedenceLevels.map((item) {
+              final index = precedenceLevels.indexOf(item);
+              final isHighlighted = item['level'] == highlightLevel;
+
+              final width = constraints.maxWidth *
+                  (0.55 + (index / (precedenceLevels.length - 1)) * 0.45);
+              final top = constraints.maxHeight *
+                  (index / (precedenceLevels.length - 1)) *
+                  0.9;
+
+              return Positioned(
+                top: top,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: width,
+                  height: constraints.maxHeight * 0.1,
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isHighlighted
+                        ? const Color(0xFF2C5282).withOpacity(0.7)
+                        : const Color(0xFF4A5568).withOpacity(0.2),
+                    border: Border.all(
+                        color: isHighlighted
+                            ? const Color(0xFF63B3ED)
+                            : const Color(0xFF4A5568).withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: isHighlighted
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF63B3ED).withOpacity(0.5),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${item['level']}. ${item['name']}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: isHighlighted
+                            ? Colors.white
+                            : const Color(0xFFA0AEC0),
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CustomExpansionTile extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  final bool isPrimary;
+
+  const _CustomExpansionTile({
+    required this.title,
+    required this.children,
+    this.isPrimary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        iconColor: const Color(0xFFA0AEC0),
+        collapsedIconColor: const Color(0xFFA0AEC0),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        title: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color:
+                isPrimary ? const Color(0xFF63B3ED) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        backgroundColor: const Color(0xFF1A202C),
+        collapsedBackgroundColor:
+            isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+                color: isPrimary
+                    ? const Color(0xFF2C5282)
+                    : const Color(0xFF4A5568))),
+        collapsedShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+                color: isPrimary
+                    ? const Color(0xFF2C5282)
+                    : const Color(0xFF4A5568))),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 
 // File: c:\keithclift24\AcqAdvantage\lib\widgets\chat_message_bubble.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/chat_message.dart';
+import 'briefing_card_bubble.dart'; // Import the new widget
 
 class ChatMessageBubble extends StatelessWidget {
   final ChatMessage message;
@@ -1347,6 +2379,14 @@ class ChatMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check the message type to decide which widget to render
+    if (message.messageType == MessageType.briefingCard &&
+        message.structuredData != null) {
+      // If it's a briefing card with data, show our new widget
+      return BriefingCardBubble(data: message.structuredData!);
+    }
+
+    // --- Otherwise, show the original text bubble ---
     final isUserMessage = message.isFromUser;
     return Align(
       alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
@@ -1363,10 +2403,16 @@ class ChatMessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(isUserMessage ? 0 : 16.0),
           ),
         ),
-        child: Text(
-          message.text,
-          style: const TextStyle(color: Colors.white),
-        ),
+        child: isUserMessage
+            ? Text(
+                message.text,
+                style: const TextStyle(color: Colors.white),
+              )
+            : MarkdownBody(
+                data: message.text,
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(p: const TextStyle(color: Colors.white)),
+              ),
       ),
     );
   }
@@ -1375,6 +2421,8 @@ class ChatMessageBubble extends StatelessWidget {
 
 // File: c:\keithclift24\AcqAdvantage\lib\widgets\page_scaffold.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
 class PageScaffold extends StatelessWidget {
   final String title;
@@ -1388,10 +2436,35 @@ class PageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white, // White text for good contrast
+        actions: [
+          Row(
+            children: [
+              const Icon(Icons.circle, color: Colors.green, size: 12),
+              const SizedBox(width: 4),
+              const Text('Logged In'),
+              const SizedBox(width: 16),
+              Text(
+                authProvider.isSubscribed ? 'Subscribed' : 'Not Subscribed',
+                style: TextStyle(
+                  color: authProvider.isSubscribed ? Colors.green : Colors.red,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () {
+                  authProvider.checkSubscriptionStatus();
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       body: Stack(
         fit: StackFit.expand,
