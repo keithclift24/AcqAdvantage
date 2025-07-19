@@ -64,6 +64,27 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                 ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.warning, color: Colors.grey, size: 16.0),
+                    const SizedBox(width: 8.0),
+                    Expanded(
+                      child: Text(
+                        'For your security, do not submit sensitive information. This includes, but is not limited to: Personally Identifiable Information (PII), corporate proprietary data, trade secrets, or any government-classified or Controlled Unclassified Information (CUI).',
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               _buildInputArea(context, chatProvider),
             ],
           ),

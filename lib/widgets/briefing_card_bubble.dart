@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'dart:math'; // Needed for min function
 
 // --- Main Widget ---
 class BriefingCardBubble extends StatelessWidget {
@@ -11,7 +12,7 @@ class BriefingCardBubble extends StatelessWidget {
 
   const BriefingCardBubble({super.key, required this.data});
 
-  // Helper function to safely access nested data from the JSON
+  // Helper function to safely access nested data
   T? _get<T>(List<String> path) {
     dynamic current = data;
     for (var key in path) {
@@ -25,8 +26,9 @@ class BriefingCardBubble extends StatelessWidget {
     return null;
   }
 
-  // Function to format the card's data for clipboard, sharing, or export
+  // Formats the card's data for clipboard/sharing
   String _formatForExport() {
+    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
     final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
     final recommendations = _get<Map<String, dynamic>>(
         ['strategic_implications_and_recommendations']);
@@ -35,6 +37,16 @@ class BriefingCardBubble extends StatelessWidget {
         [];
 
     final buffer = StringBuffer();
+
+    if (queryAnalysis != null) {
+      final assumptions =
+          queryAnalysis['assumptions_made'] as List<dynamic>? ?? [];
+      if (assumptions.isNotEmpty) {
+        buffer.writeln(
+            "ASSUMPTIONS MADE FOR THIS RESPONSE:\n${assumptions.map((e) => "- $e").join('\n')}\n");
+      }
+    }
+
     buffer.writeln("ISSUE:\n${irac?['issue'] ?? 'N/A'}\n");
     buffer.writeln("CONCLUSION (BLUF):\n${irac?['conclusion'] ?? 'N/A'}\n");
     buffer.writeln("--- DETAILED ANALYSIS ---\n");
@@ -68,7 +80,7 @@ class BriefingCardBubble extends StatelessWidget {
       buffer.writeln("--- CONTROLLING AUTHORITIES ---\n");
       buffer.writeln(authorities
           .map((auth) =>
-              "- (${auth['precedence_level']}) ${auth['source_name']} ${auth['reference']}")
+              "- (${auth['precedence_level']}) ${auth['precedence_name']}: ${auth['source_name']} ${auth['reference']}")
           .join('\n'));
       buffer.writeln();
     }
@@ -85,7 +97,6 @@ class BriefingCardBubble extends StatelessWidget {
     return buffer.toString();
   }
 
-  // --- New helper method to build guidance items for the expansion tile ---
   List<Widget> _buildGuidanceItems(Map<String, dynamic> recommendations) {
     final takeaways =
         recommendations['key_takeaways_for_leadership'] as List<dynamic>? ?? [];
@@ -125,12 +136,21 @@ class BriefingCardBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final queryAnalysis = _get<Map<String, dynamic>>(['query_analysis']);
     final irac = _get<Map<String, dynamic>>(['structured_reasoning_irac']);
     final recommendations = _get<Map<String, dynamic>>(
         ['strategic_implications_and_recommendations']);
     final authorities = _get<List<dynamic>>(
             ['source_analysis_and_hierarchy', 'controlling_authorities']) ??
         [];
+
+    // Find the highest precedence level (lowest number) from the cited authorities
+    int? highestPrecedenceLevel;
+    if (authorities.isNotEmpty) {
+      highestPrecedenceLevel = authorities
+          .map((auth) => auth['precedence_level'] as int)
+          .reduce(min);
+    }
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
@@ -156,7 +176,6 @@ class BriefingCardBubble extends StatelessWidget {
                   subject: irac?['issue'] ?? 'Acquisition Analysis');
             },
           ),
-
           if (irac?['conclusion'] != null) ...[
             const SizedBox(height: 20),
             _Section(
@@ -170,13 +189,10 @@ class BriefingCardBubble extends StatelessWidget {
               ),
             ),
           ],
-
           if (irac != null) ...[
             const SizedBox(height: 24),
             _IracAnalysisSection(irac: irac),
           ],
-
-          // --- MODIFIED: Guidance Section is now a collapsible tile ---
           if (recommendations != null) ...[
             const SizedBox(height: 24),
             _CustomExpansionTile(
@@ -184,11 +200,12 @@ class BriefingCardBubble extends StatelessWidget {
               children: _buildGuidanceItems(recommendations),
             ),
           ],
-
           const SizedBox(height: 20),
           _CardFooter(
+            queryAnalysis: queryAnalysis,
             faqItems: recommendations?['anticipated_follow_ups'] ?? [],
             authorities: authorities,
+            highestPrecedenceLevel: highestPrecedenceLevel,
           ),
         ],
       ),
@@ -202,7 +219,6 @@ class _CardHeader extends StatelessWidget {
   final String title;
   final VoidCallback onCopy;
   final VoidCallback onShare;
-
   const _CardHeader(
       {required this.title, required this.onCopy, required this.onShare});
 
@@ -262,7 +278,6 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-
   const _ActionButton(
       {required this.icon, required this.label, required this.onTap});
 
@@ -363,9 +378,16 @@ class _IracAnalysisSection extends StatelessWidget {
 }
 
 class _CardFooter extends StatelessWidget {
+  final Map<String, dynamic>? queryAnalysis;
   final List<dynamic> faqItems;
   final List<dynamic> authorities;
-  const _CardFooter({required this.faqItems, required this.authorities});
+  final int? highestPrecedenceLevel;
+
+  const _CardFooter(
+      {this.queryAnalysis,
+      required this.faqItems,
+      required this.authorities,
+      this.highestPrecedenceLevel});
 
   @override
   Widget build(BuildContext context) {
@@ -406,9 +428,37 @@ class _CardFooter extends StatelessWidget {
             const SizedBox(height: 12),
             _CustomExpansionTile(
               title: '📜 View Authorities & Sources',
-              children: authorities
-                  .map((auth) => _AuthorityItem(authority: auth))
-                  .toList(),
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        children: authorities
+                            .map((auth) => _AuthorityItem(
+                                authority: auth,
+                                isHighlighted: auth['precedence_level'] ==
+                                    highestPrecedenceLevel))
+                            .toList(),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _PrecedencePyramid(
+                          highlightLevel: highestPrecedenceLevel),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ],
+          if (queryAnalysis != null) ...[
+            const SizedBox(height: 12),
+            _CustomExpansionTile(
+              title: '💡 View Response Context',
+              children: [_QueryAnalysisItem(analysis: queryAnalysis!)],
             ),
           ]
         ],
@@ -419,12 +469,15 @@ class _CardFooter extends StatelessWidget {
 
 class _AuthorityItem extends StatelessWidget {
   final Map<String, dynamic> authority;
-  const _AuthorityItem({required this.authority});
+  final bool isHighlighted;
+  const _AuthorityItem({required this.authority, this.isHighlighted = false});
 
   @override
   Widget build(BuildContext context) {
     final url = authority['url'] as String?;
     final canLaunch = url != null && url.isNotEmpty;
+    final isSupplemental = authority['is_supplemental'] as bool? ?? false;
+    final precedenceName = authority['precedence_name'] as String?;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
@@ -434,22 +487,40 @@ class _AuthorityItem extends StatelessWidget {
           InkWell(
             onTap: canLaunch
                 ? () async {
-                    final uri = Uri.parse(url);
+                    final uri = Uri.parse(url!);
                     if (await canLaunchUrl(uri)) {
                       await launchUrl(uri);
                     }
                   }
                 : null,
-            child: Text(
-              '(${authority['precedence_level']}) ${authority['source_name']} ${authority['reference']}',
-              style: TextStyle(
-                  color: canLaunch
-                      ? const Color(0xFF63B3ED)
-                      : const Color(0xFFCBD5E0),
-                  decoration: canLaunch
-                      ? TextDecoration.underline
-                      : TextDecoration.none,
-                  fontWeight: FontWeight.bold),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                    text:
+                        '(${authority['precedence_level']}) ${precedenceName ?? ""}: ',
+                    style: TextStyle(
+                        color: isHighlighted
+                            ? const Color(0xFF63B3ED)
+                            : const Color(0xFFA0AEC0))),
+                TextSpan(
+                    text:
+                        '${authority['source_name']} ${authority['reference']}',
+                    style: TextStyle(
+                      color: canLaunch
+                          ? const Color(0xFF63B3ED)
+                          : const Color(0xFFCBD5E0),
+                      decoration: canLaunch
+                          ? TextDecoration.underline
+                          : TextDecoration.none,
+                    )),
+                if (isSupplemental)
+                  const TextSpan(
+                      text: ' [Supplemental]',
+                      style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Color(0xFFA0AEC0)))
+              ]),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(height: 4),
@@ -459,6 +530,128 @@ class _AuthorityItem extends StatelessWidget {
                 color: Color(0xFFA0AEC0), fontStyle: FontStyle.italic),
           )
         ],
+      ),
+    );
+  }
+}
+
+class _QueryAnalysisItem extends StatelessWidget {
+  final Map<String, dynamic> analysis;
+  const _QueryAnalysisItem({required this.analysis});
+
+  @override
+  Widget build(BuildContext context) {
+    final gaps = analysis['identified_gaps'] as List<dynamic>? ?? [];
+    final assumptions = analysis['assumptions_made'] as List<dynamic>? ?? [];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (gaps.isNotEmpty) ...[
+          const Text("Identified Gaps in Query:",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
+          ...gaps.map((gap) =>
+              Text("- $gap", style: const TextStyle(color: Color(0xFFCBD5E0)))),
+          const SizedBox(height: 10),
+        ],
+        if (assumptions.isNotEmpty) ...[
+          const Text("Assumptions Made for this Response:",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Color(0xFFEDF2F7))),
+          ...assumptions.map((assumption) => Text("- $assumption",
+              style: const TextStyle(color: Color(0xFFCBD5E0)))),
+        ]
+      ],
+    );
+  }
+}
+
+// --- NEW PYRAMID WIDGET ---
+class _PrecedencePyramid extends StatelessWidget {
+  final int? highlightLevel;
+
+  final List<Map<String, dynamic>> precedenceLevels = const [
+    {'level': 1, 'name': 'Constitution'},
+    {'level': 2, 'name': 'Statutes'},
+    {'level': 3, 'name': 'Exec Orders'},
+    {'level': 4, 'name': 'Gov Policy'},
+    {'level': 5, 'name': 'FAR'},
+    {'level': 6, 'name': 'Supplements'},
+    {'level': 7, 'name': 'Procedures'},
+    {'level': 8, 'name': 'DoD FMR'},
+    {'level': 9, 'name': 'Memos'},
+    {'level': 10, 'name': 'Case Law'},
+    {'level': 11, 'name': 'T&Cs'},
+    {'level': 12, 'name': 'Local'},
+    {'level': 13, 'name': 'Forums'}
+  ];
+
+  const _PrecedencePyramid({this.highlightLevel});
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 1 / 1.1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            alignment: Alignment.center,
+            children: precedenceLevels.map((item) {
+              final index = precedenceLevels.indexOf(item);
+              final isHighlighted = item['level'] == highlightLevel;
+
+              final width = constraints.maxWidth *
+                  (0.55 + (index / (precedenceLevels.length - 1)) * 0.45);
+              final top = constraints.maxHeight *
+                  (index / (precedenceLevels.length - 1)) *
+                  0.9;
+
+              return Positioned(
+                top: top,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: width,
+                  height: constraints.maxHeight * 0.1,
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  decoration: BoxDecoration(
+                    color: isHighlighted
+                        ? const Color(0xFF2C5282).withOpacity(0.7)
+                        : const Color(0xFF4A5568).withOpacity(0.2),
+                    border: Border.all(
+                        color: isHighlighted
+                            ? const Color(0xFF63B3ED)
+                            : const Color(0xFF4A5568).withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: isHighlighted
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFF63B3ED).withOpacity(0.5),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${item['level']}. ${item['name']}',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: isHighlighted
+                            ? Colors.white
+                            : const Color(0xFFA0AEC0),
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
