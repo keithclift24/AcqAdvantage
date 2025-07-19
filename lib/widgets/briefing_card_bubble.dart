@@ -392,7 +392,8 @@ class _CommandPalette extends StatelessWidget {
   const _CommandPalette({this.recommendations, required this.onActionTapped});
 
   static const Map<String, IconData> _commandIcons = {
-    '/more': Icons.search,
+    '/more': Icons.zoom_in_outlined,
+    '/deeper': Icons.explore_outlined,
     '/scenario': Icons.theater_comedy_outlined,
     '/cite': Icons.format_quote_outlined,
     '/contrast': Icons.compare_arrows_outlined,
@@ -405,8 +406,20 @@ class _CommandPalette extends StatelessWidget {
   Widget build(BuildContext context) {
     final faqItems =
         recommendations?['anticipated_follow_ups'] as List<dynamic>? ?? [];
-    final suggestedCommands =
+    final suggestedCommandsRaw =
         recommendations?['suggested_commands'] as List<dynamic>? ?? [];
+
+    // Create the final list of commands to display
+    final List<Map<String, dynamic>> suggestedCommands = [
+      {'command': '/more', 'description': 'Drill deeper'},
+      {'command': '/deeper', 'description': 'Explore related topics'},
+      ...suggestedCommandsRaw,
+    ];
+    // Remove duplicates, keeping the first occurrence
+    final uniqueCommands = <String>{};
+    final uniqueCommandList = suggestedCommands.where((cmd) {
+      return uniqueCommands.add(cmd['command'] as String);
+    }).toList();
 
     if (faqItems.isEmpty && suggestedCommands.isEmpty) {
       return const SizedBox.shrink();
@@ -424,42 +437,82 @@ class _CommandPalette extends StatelessWidget {
               letterSpacing: 0.5),
         ),
         const SizedBox(height: 12),
-        // Top Tier: Suggested Questions
-        ...faqItems.map((faq) {
-          final question = faq['question'] as String?;
-          if (question == null) return const SizedBox.shrink();
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: _QuestionButton(
-              text: question,
-              onTap: () => onActionTapped(question),
-            ),
-          );
-        }),
-
-        // Divider
-        if (faqItems.isNotEmpty && suggestedCommands.isNotEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8.0),
-            child: Divider(color: Color(0xFF4A5568)),
+        Container(
+          padding: const EdgeInsets.all(12.0),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A202C),
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left Column: Suggested Questions
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Explore Further',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFCBD5E0)),
+                    ),
+                    const SizedBox(height: 8),
+                    ...faqItems.map((faq) {
+                      final question = faq['question'] as String?;
+                      if (question == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _QuestionButton(
+                          text: question,
+                          onTap: () => onActionTapped(question),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
 
-        // Bottom Tier: Power Commands
-        if (suggestedCommands.isNotEmpty)
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            alignment: WrapAlignment.center,
-            children: suggestedCommands.map((cmd) {
-              final command = cmd['command'] as String?;
-              if (command == null) return const SizedBox.shrink();
-              return _CommandButton(
-                command: command,
-                icon: _commandIcons[command],
-                onTap: () => onActionTapped(command),
-              );
-            }).toList(),
+              const SizedBox(width: 12),
+              const IntrinsicHeight(
+                  child: VerticalDivider(
+                      color: Color(0xFF2D3748), width: 1, thickness: 1)),
+              const SizedBox(width: 12),
+
+              // Right Column: Power Commands
+              Expanded(
+                flex: 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Commands',
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFCBD5E0)),
+                    ),
+                    const SizedBox(height: 8),
+                    ...uniqueCommandList.map((cmd) {
+                      final command = cmd['command'] as String?;
+                      if (command == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: _CommandButton(
+                          command: command,
+                          icon: _commandIcons[command],
+                          onTap: () => onActionTapped(command),
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
           ),
+        ),
       ],
     );
   }
@@ -473,7 +526,7 @@ class _QuestionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF4A5568),
+      color: const Color(0xFF2D3748),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -482,7 +535,10 @@ class _QuestionButton extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Text(text,
-              style: const TextStyle(color: Color(0xFFEDF2F7), fontSize: 13)),
+              style: const TextStyle(
+                  color: Color(0xFFEDF2F7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500)),
         ),
       ),
     );
@@ -497,17 +553,17 @@ class _CommandButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPrimary = command == '/more';
+    final isPrimary = command == '/more' || command == '/deeper';
     final label = command.replaceFirst('/', ''); // Remove the slash for display
 
     return Material(
-      color: isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
-      borderRadius: BorderRadius.circular(20),
+      color: isPrimary ? const Color(0xFF2C5282) : const Color(0xFF2D3748),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
