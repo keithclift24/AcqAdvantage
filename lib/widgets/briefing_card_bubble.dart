@@ -343,6 +343,8 @@ class _IracAnalysisSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tableData = irac['table_data'] as Map<String, dynamic>?;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -357,14 +359,16 @@ class _IracAnalysisSection extends StatelessWidget {
         const SizedBox(height: 12),
         _buildIracItem('Rule', irac['rule']),
         _buildIracItem('Application', irac['application']),
+        if (tableData != null) ...[
+          const SizedBox(height: 12),
+          _StructuredTable(tableData: tableData),
+        ]
       ],
     );
   }
 
   Widget _buildIracItem(String title, String? text) {
-    if (text == null || text.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (text == null || text.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(bottom: 10.0),
       child: Column(
@@ -381,6 +385,54 @@ class _IracAnalysisSection extends StatelessWidget {
                   fontSize: 14, color: Color(0xFFE2E8F0), height: 1.5)),
         ],
       ),
+    );
+  }
+}
+
+class _StructuredTable extends StatelessWidget {
+  final Map<String, dynamic> tableData;
+  const _StructuredTable({required this.tableData});
+
+  @override
+  Widget build(BuildContext context) {
+    final headers = (tableData['headers'] as List<dynamic>? ?? [])
+        .map((h) => h.toString())
+        .toList();
+    final rows = (tableData['rows'] as List<dynamic>? ?? [])
+        .map((row) =>
+            (row as List<dynamic>).map((cell) => cell.toString()).toList())
+        .toList();
+
+    return Table(
+      border: TableBorder.all(color: const Color(0xFF4A5568), width: 1),
+      columnWidths: const <int, TableColumnWidth>{
+        0: IntrinsicColumnWidth(),
+      },
+      children: [
+        // Header Row
+        TableRow(
+          decoration: const BoxDecoration(color: Color(0xFF4A5568)),
+          children: headers
+              .map((header) => Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(header,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFEDF2F7))),
+                  ))
+              .toList(),
+        ),
+        // Data Rows
+        ...rows.map((row) => TableRow(
+              children: row
+                  .map((cell) => Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: SelectableText(cell,
+                            style: const TextStyle(color: Color(0xFFE2E8F0))),
+                      ))
+                  .toList(),
+            )),
+      ],
     );
   }
 }
