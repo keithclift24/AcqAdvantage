@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:backendless_sdk/backendless_sdk.dart';
 import 'package:http/http.dart' as http;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../models/chat_message.dart';
 import 'auth_provider.dart';
 
@@ -12,6 +14,7 @@ class ChatProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _threadId;
   final ScrollController _scrollController = ScrollController();
+  io.Socket? _socket;
 
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -22,29 +25,55 @@ class ChatProvider extends ChangeNotifier {
     // You can add logic here to react to auth changes if needed.
   }
 
+  void _connectToSocket() {
+    // Disconnect any existing socket
+    _socket?.dispose();
+
+    // Connect to your WebSocket server
+    _socket = io.io('https://acqadvantage-api.onrender.com', <String, dynamic>{
+      'transports': ['websocket'],
+      'autoConnect': true,
+    });
+
+    _socket!.onConnect((_) => debugPrint('Connected to WebSocket server'));
+    _socket!
+        .onDisconnect((_) => debugPrint('Disconnected from WebSocket server'));
+
+    // --- Listen for the final response from the server ---
+    _socket!.on('assistant_response', (data) {
+      _isLoading = false;
+      final status = data['status'];
+
+      if (status == 'completed') {
+        final lastMessageIndex = _messages.length - 1;
+        _messages[lastMessageIndex] = ChatMessage(
+          text: 'Briefing Card received',
+          isFromUser: false,
+          messageType: MessageType.briefingCard,
+          structuredData: data['response'],
+        );
+      } else {
+        _messages.last.text = 'Error: ${data['error']}';
+      }
+      notifyListeners();
+      _scrollToBottom();
+    });
+  }
+
   Future<void> initializeChat(BackendlessUser? user) async {
     if (user == null) return;
-
     final url = Uri.parse('https://acqadvantage-api.onrender.com/start_chat');
     final userToken = await Backendless.userService.getUserToken();
-
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-          'user-token': userToken!,
-        },
+        headers: {'Content-Type': 'application/json', 'user-token': userToken!},
         body: json.encode({'objectId': user.getProperty('objectId')}),
       );
-
       if (response.statusCode == 200) {
         final responseBody = json.decode(response.body);
         _threadId = responseBody['thread_id'];
-        debugPrint('Chat initialized with thread ID: $_threadId');
-      } else {
-        debugPrint('Failed to initialize chat: ${response.statusCode}');
-        debugPrint('Response body: ${response.body}');
+        _connectToSocket(); // Connect to WebSocket after getting thread ID
       }
     } catch (e) {
       debugPrint('Error initializing chat: $e');
@@ -79,78 +108,33 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> sendMessage(
       String text, BackendlessUser? user, AuthProvider authProvider) async {
-    if (user == null || _threadId == null) return;
+    if (user == null ||
+        _threadId == null ||
+        _socket == null ||
+        !_socket!.connected) {
+      _messages.add(ChatMessage(
+          text: "Error: Not connected to the server. Please restart the app.",
+          isFromUser: false));
+      notifyListeners();
+      return;
+    }
 
     _messages.add(ChatMessage(text: text, isFromUser: true));
     _isLoading = true;
     notifyListeners();
     _scrollToBottom();
 
-    // Add a placeholder for the assistant's response. We will update this object later.
-    _messages.add(ChatMessage(text: '', isFromUser: false));
+    _messages.add(ChatMessage(text: '...', isFromUser: false)); // Placeholder
     notifyListeners();
     _scrollToBottom();
 
-    final url = Uri.parse('https://acqadvantage-api.onrender.com/ask');
-    final userToken = await Backendless.userService.getUserToken();
-    final request = http.Request('POST', url)
-      ..headers.addAll({
-        'Content-Type': 'application/json',
-        'user-token': userToken!,
-      })
-      ..body = json.encode({
-        'prompt': text,
-        'thread_id': _threadId,
-        'objectId': user.getProperty('objectId'),
-      });
-
-    try {
-      final streamedResponse = await request.send();
-
-      // Use a StringBuffer to efficiently collect the chunks of the response
-      final buffer = StringBuffer();
-
-      streamedResponse.stream.transform(utf8.decoder).listen((chunk) {
-        buffer.write(chunk);
-      }, onDone: () {
-        _isLoading = false;
-        try {
-          // 1. Get the complete string from the buffer.
-          final fullResponse = buffer.toString();
-
-          // 2. IMPORTANT: Parse the string into a JSON Map.
-          final Map<String, dynamic> jsonData = json.decode(fullResponse);
-
-          // 3. Find the placeholder message we added earlier.
-          final lastMessageIndex = _messages.length - 1;
-
-          // 4. Replace the placeholder with a NEW ChatMessage that has the correct type and data.
-          _messages[lastMessageIndex] = ChatMessage(
-            text: 'Briefing Card received', // This text won't be displayed.
-            isFromUser: false,
-            messageType:
-                MessageType.briefingCard, // <-- This tells the UI what to do.
-            structuredData: jsonData, // <-- This passes the data to the widget.
-          );
-        } catch (e) {
-          // This is a fallback if the response ISN'T valid JSON.
-          _messages.last.text = buffer.toString().isNotEmpty
-              ? buffer.toString()
-              : 'Error: Failed to get a valid response.';
-          debugPrint('JSON parsing failed: $e');
-        }
-        // 5. Update the UI.
-        notifyListeners();
-      }, onError: (error) {
-        _isLoading = false;
-        _messages.last.text = 'Error: $error';
-        notifyListeners();
-      });
-    } catch (e) {
-      _isLoading = false;
-      _messages.last.text = 'Error: $e';
-      notifyListeners();
-    }
+    // --- Send message via WebSocket instead of HTTP ---
+    _socket!.emit('send_message', {
+      'prompt': text,
+      'thread_id': _threadId,
+      'objectId': user.getProperty('objectId'),
+      // You may need to pass the user-token if your backend socket handler requires it
+    });
   }
 
   void _scrollToBottom() {
@@ -161,5 +145,12 @@ class ChatProvider extends ChangeNotifier {
         curve: Curves.easeOut,
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _socket?.dispose(); // Important: clean up the socket connection
+    _scrollController.dispose();
+    super.dispose();
   }
 }
