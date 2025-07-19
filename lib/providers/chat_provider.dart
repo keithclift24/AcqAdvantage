@@ -15,6 +15,7 @@ class ChatProvider extends ChangeNotifier {
   String? _threadId;
   final ScrollController _scrollController = ScrollController();
   io.Socket? _socket;
+  bool _isConnected = false;
 
   List<ChatMessage> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -35,9 +36,14 @@ class ChatProvider extends ChangeNotifier {
       'autoConnect': true,
     });
 
-    _socket!.onConnect((_) => debugPrint('Connected to WebSocket server'));
-    _socket!
-        .onDisconnect((_) => debugPrint('Disconnected from WebSocket server'));
+    _socket!.onConnect((_) {
+      debugPrint('Connected to WebSocket server');
+      _isConnected = true;
+    });
+    _socket!.onDisconnect((_) {
+      debugPrint('Disconnected from WebSocket server');
+      _isConnected = false;
+    });
 
     // --- Listen for the final response from the server ---
     _socket!.on('assistant_response', (data) {
@@ -108,10 +114,7 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> sendMessage(
       String text, BackendlessUser? user, AuthProvider authProvider) async {
-    if (user == null ||
-        _threadId == null ||
-        _socket == null ||
-        !_socket!.connected) {
+    if (user == null || _threadId == null || _socket == null || !_isConnected) {
       _messages.add(ChatMessage(
           text: "Error: Not connected to the server. Please restart the app.",
           isFromUser: false));
