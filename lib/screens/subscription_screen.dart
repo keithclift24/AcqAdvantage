@@ -127,7 +127,7 @@ class SubscriptionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 5),
                         const Text(
-                          'Equivalent to \$23.99/month',
+                          'Equivalent to \$8.33/month',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
