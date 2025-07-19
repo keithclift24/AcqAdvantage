@@ -17,7 +17,7 @@ class ChatMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double maxWidth = 720.0;
+    const double maxWidth = 1000.0;
 
     if (message.messageType == MessageType.briefingCard &&
         message.structuredData != null) {
