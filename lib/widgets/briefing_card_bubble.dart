@@ -275,13 +275,11 @@ class _ActionButton extends StatelessWidget {
   final IconData? icon;
   final String label;
   final VoidCallback onTap;
-  final bool isPrimary;
 
   const _ActionButton({
     this.icon,
     required this.label,
     required this.onTap,
-    this.isPrimary = false,
   });
 
   @override
@@ -292,7 +290,7 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isPrimary ? const Color(0xFF2C5282) : const Color(0xFF4A5568),
+          color: const Color(0xFF4A5568),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
@@ -437,7 +435,7 @@ class _CommandPalette extends StatelessWidget {
               onTap: () => onActionTapped(question),
             ),
           );
-        }).toList(),
+        }),
 
         // Divider
         if (faqItems.isNotEmpty && suggestedCommands.isNotEmpty)
